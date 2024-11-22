@@ -1,4 +1,12 @@
 /** @type {import('next').NextConfig} */
-const nextConfig = {};
+const nextConfig = {
+  reactStrictMode: true,
+  images: {
+    domains: ['*'],
+  },
+  env: {
+    API_URL: process.env.API_URL || 'http://localhost:3000',
+  },
+};
 
 export default nextConfig;
