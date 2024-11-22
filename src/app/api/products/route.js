@@ -17,9 +17,21 @@ export async function GET(request) {
   let db;
 
   try {
+    console.log('Attempting to connect to SQLite Cloud...');
+    
+    // Initialize database connection
     db = new Database('sqlitecloud://cwwcqlv7nk.sqlite.cloud:8860?apikey=AaNIeaKIdCsKAeNXUXeXLaTMpKCnKWqAysZXgZlBhzU');
     
+    console.log('Connected to SQLite Cloud successfully');
+    
+    // Set the database
+    console.log('Setting database to "products"...');
     await db.sql('USE DATABASE products;');
+    console.log('Database set successfully');
+
+    // Test query to verify connection
+    const testQuery = await db.sql('SELECT COUNT(*) as count FROM products LIMIT 1;');
+    console.log('Test query result:', testQuery);
 
     // Build the WHERE clause based on filters
     let whereConditions = [];
@@ -27,23 +39,16 @@ export async function GET(request) {
 
     if (search) {
       whereConditions.push(`(
-        name LIKE ? 
-        OR manufacturer LIKE ? 
-        OR short_description LIKE ? 
-        OR long_description LIKE ?
-        OR wpsso_product_mfr_part_no LIKE ?
-        OR wpsso_product_gtin13 LIKE ?
+        LOWER(name) LIKE LOWER(?) 
+        OR LOWER(manufacturer) LIKE LOWER(?) 
+        OR LOWER(short_description) LIKE LOWER(?) 
+        OR LOWER(long_description) LIKE LOWER(?)
+        OR LOWER(wpsso_product_mfr_part_no) LIKE LOWER(?)
+        OR LOWER(wpsso_product_gtin13) LIKE LOWER(?)
         OR CAST(product_id AS TEXT) LIKE ?
       )`);
-      params.push(
-        `%${search}%`, 
-        `%${search}%`, 
-        `%${search}%`,
-        `%${search}%`,
-        `%${search}%`,
-        `%${search}%`,
-        `%${search}%`
-      );
+      const searchTerm = `%${search}%`;
+      params.push(searchTerm, searchTerm, searchTerm, searchTerm, searchTerm, searchTerm, searchTerm);
     }
 
     if (warehouse !== 'all') {
@@ -57,16 +62,16 @@ export async function GET(request) {
     }
 
     if (showInStock) {
-      whereConditions.push("stock > 0");
+      whereConditions.push("CAST(stock AS INTEGER) > 0");
     }
 
     if (minPrice) {
-      whereConditions.push("regular_price >= ?");
+      whereConditions.push("CAST(regular_price AS DECIMAL) >= ?");
       params.push(parseFloat(minPrice));
     }
 
     if (maxPrice) {
-      whereConditions.push("regular_price <= ?");
+      whereConditions.push("CAST(regular_price AS DECIMAL) <= ?");
       params.push(parseFloat(maxPrice));
     }
 
@@ -78,10 +83,10 @@ export async function GET(request) {
     let orderByClause = '';
     switch (sortBy) {
       case 'price-high':
-        orderByClause = 'ORDER BY regular_price DESC';
+        orderByClause = 'ORDER BY CAST(regular_price AS DECIMAL) DESC';
         break;
       case 'price-low':
-        orderByClause = 'ORDER BY regular_price ASC';
+        orderByClause = 'ORDER BY CAST(regular_price AS DECIMAL) ASC';
         break;
       case 'name-asc':
         orderByClause = 'ORDER BY name ASC';
@@ -94,15 +99,19 @@ export async function GET(request) {
     }
 
     // Get total count for pagination
+    console.log('Executing count query...');
     const countQuery = `
       SELECT COUNT(*) as total
       FROM products
       ${whereClause}
     `;
     
-    const [{ total }] = await db.sql(countQuery, ...params);
+    const countResult = await db.sql(countQuery, ...params);
+    console.log('Count query result:', countResult);
+    const total = countResult[0]?.total || 0;
 
     // Get paginated results
+    console.log('Executing main query...');
     const query = `
       SELECT 
         id, 
@@ -129,9 +138,14 @@ export async function GET(request) {
       LIMIT ? OFFSET ?
     `;
 
-    const results = await db.sql(query, ...params, limit, offset);
+    console.log('Query:', query);
+    console.log('Params:', [...params, limit, offset]);
 
-    // Get warehouse counts with current filters (except warehouse filter)
+    const results = await db.sql(query, ...params, limit, offset);
+    console.log('Query results count:', results.length);
+
+    // Get warehouse counts
+    console.log('Getting warehouse counts...');
     let warehouseWhereConditions = whereConditions.filter(condition => !condition.includes('warehouse ='));
     let warehouseParams = params.filter((_, index) => !whereConditions[index]?.includes('warehouse ='));
     
@@ -146,8 +160,10 @@ export async function GET(request) {
     `;
     
     const warehouseCounts = await db.sql(warehouseCountQuery, ...warehouseParams);
+    console.log('Warehouse counts:', warehouseCounts);
 
-    // Get manufacturer counts with current filters (except manufacturer filter)
+    // Get manufacturer counts
+    console.log('Getting manufacturer counts...');
     let manufacturerWhereConditions = whereConditions.filter(condition => !condition.includes('manufacturer ='));
     let manufacturerParams = params.filter((_, index) => !whereConditions[index]?.includes('manufacturer ='));
     
@@ -162,26 +178,34 @@ export async function GET(request) {
     `;
     
     const manufacturerCounts = await db.sql(manufacturerCountQuery, ...manufacturerParams);
+    console.log('Manufacturer counts:', manufacturerCounts);
 
-    const response = {
+    return NextResponse.json({
       products: results,
       total,
       totalPages: Math.ceil(total / limit),
       currentPage: page,
       warehouseCounts,
       manufacturerCounts
-    };
-
-    return NextResponse.json(response);
+    });
   } catch (error) {
-    console.error('API Error:', error);
+    console.error('Database Error:', error);
     return NextResponse.json(
-      { error: error.message || 'Internal Server Error' },
+      { 
+        error: 'Database connection failed',
+        details: error.message,
+        stack: error.stack
+      },
       { status: 500 }
     );
   } finally {
     if (db) {
-      db.close();
+      try {
+        await db.close();
+        console.log('Database connection closed');
+      } catch (error) {
+        console.error('Error closing database connection:', error);
+      }
     }
   }
 }
