@@ -1,23 +1,64 @@
 'use client';
 
-export default function ProductGrid({ products, setSelectedProduct, showTax }) {
+export default function ProductGrid({ products, setSelectedProduct, showTax = false }) {
   const calculatePriceWithTax = (price) => {
     if (!price) return 0;
     const taxRate = 0.22; // 22% tax rate
     return parseFloat(price) * (1 + taxRate);
   };
 
+  if (!products || products.length === 0) {
+    return (
+      <div style={{
+        width: '100%',
+        textAlign: 'center',
+        padding: '48px 24px',
+        backgroundColor: 'white',
+        borderRadius: '12px',
+        border: '1px solid #e5e7eb'
+      }}>
+        <svg 
+          width="48" 
+          height="48" 
+          viewBox="0 0 24 24" 
+          fill="none" 
+          stroke="currentColor"
+          style={{
+            margin: '0 auto 16px',
+            color: '#9ca3af'
+          }}
+        >
+          <path d="M3 3h18v18H3zM12 8v8M8 12h8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+        <h3 style={{
+          fontSize: '18px',
+          fontWeight: '600',
+          color: '#111827',
+          marginBottom: '8px'
+        }}>
+          No Products Found
+        </h3>
+        <p style={{
+          fontSize: '14px',
+          color: '#6b7280'
+        }}>
+          Try adjusting your search or filter criteria
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div style={{
       display: 'grid',
       gridTemplateColumns: 'repeat(4, 1fr)',
-      gap: '20px',
-      marginTop: '24px'
+      gap: '24px',
+      marginBottom: '24px'
     }}>
       {products.map(product => (
         <div
           key={product.id}
-          onClick={() => setSelectedProduct(product)}
+          onClick={() => setSelectedProduct?.(product)}
           style={{
             backgroundColor: 'white',
             borderRadius: '8px',

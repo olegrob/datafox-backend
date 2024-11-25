@@ -12,7 +12,7 @@ export default function ProductPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [sortBy, setSortBy] = useState('default');
-  const [showInStock, setShowInStock] = useState(false);
+  const [showInStock, setShowInStock] = useState(true);
   const [showTax, setShowTax] = useState(false);
   const [priceRange, setPriceRange] = useState({ min: '', max: '' });
   const [selectedManufacturer, setSelectedManufacturer] = useState('all');
@@ -80,8 +80,8 @@ export default function ProductPage() {
     fetchProducts();
   }, [fetchProducts]);
 
-  const handleSearch = useCallback((e) => {
-    setSearchQuery(e.target.value);
+  const handleSearch = useCallback((value) => {
+    setSearchQuery(value);
     setCurrentPage(1);
   }, []);
 
@@ -120,96 +120,96 @@ export default function ProductPage() {
 
   if (error) {
     return (
-      <div className="error-container">
-        <div>Error: {error}</div>
-        <button onClick={fetchProducts}>Try Again</button>
+      <div style={{
+        padding: '24px',
+        textAlign: 'center',
+        color: '#ef4444'
+      }}>
+        <div style={{ marginBottom: '16px' }}>Error: {error}</div>
+        <button 
+          onClick={fetchProducts}
+          style={{
+            padding: '8px 16px',
+            borderRadius: '6px',
+            backgroundColor: '#2563eb',
+            color: 'white',
+            border: 'none',
+            cursor: 'pointer'
+          }}
+        >
+          Try Again
+        </button>
       </div>
     );
   }
 
   return (
-    <div className="product-page">
-      <Filters
-        selectedWarehouse={selectedWarehouse}
-        handleWarehouseChange={handleWarehouseChange}
-        warehouseCounts={warehouseCounts}
-        selectedManufacturer={selectedManufacturer}
-        handleManufacturerChange={handleManufacturerChange}
-        manufacturerCounts={manufacturerCounts}
-        isManufacturersExpanded={isManufacturersExpanded}
-        setIsManufacturersExpanded={setIsManufacturersExpanded}
-        sortBy={sortBy}
-        handleSort={handleSort}
-        priceRange={priceRange}
-        handlePriceChange={handlePriceChange}
-      />
-
-      <div className="main-content">
-        <TopBar
-          searchQuery={searchQuery}
-          handleSearch={handleSearch}
-          showInStock={showInStock}
-          handleStockFilter={handleStockFilter}
+    <div style={{ padding: '24px' }}>
+      <div style={{ display: 'flex', gap: '24px' }}>
+        <Filters
+          selectedWarehouse={selectedWarehouse}
+          handleWarehouseChange={handleWarehouseChange}
+          warehouseCounts={warehouseCounts}
+          selectedManufacturer={selectedManufacturer}
+          handleManufacturerChange={handleManufacturerChange}
+          manufacturerCounts={manufacturerCounts}
+          isManufacturersExpanded={isManufacturersExpanded}
+          setIsManufacturersExpanded={setIsManufacturersExpanded}
           sortBy={sortBy}
           handleSort={handleSort}
-          totalProducts={totalProducts}
+          priceRange={priceRange}
+          handlePriceChange={handlePriceChange}
         />
 
-        {loading ? (
-          <div className="loading-overlay">Loading...</div>
-        ) : (
-          <>
-            <div className="page-info">
-              <span>{totalProducts} products found</span>
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '12px'
-              }}>
-                <button
-                  onClick={() => setShowTax(prev => !prev)}
-                  style={{
-                    padding: '4px 12px',
-                    borderRadius: '6px',
-                    border: '1px solid #e5e7eb',
-                    backgroundColor: showTax ? '#2563eb' : 'white',
-                    color: showTax ? 'white' : '#374151',
-                    cursor: 'pointer',
-                    fontSize: '14px',
-                    fontWeight: '500',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    transition: 'all 0.2s'
-                  }}
-                >
-                  KM {showTax ? 'ON' : 'OFF'}
-                </button>
-                <span>Page {currentPage} of {totalPages}</span>
-              </div>
+        <div style={{ flex: 1 }}>
+          <TopBar
+            searchQuery={searchQuery}
+            handleSearch={handleSearch}
+            inStockOnly={showInStock}
+            handleInStockChange={handleStockFilter}
+            totalProducts={totalProducts}
+            currentPage={currentPage}
+            totalPages={totalPages}
+            showTax={showTax}
+            setShowTax={setShowTax}
+          />
+
+          {loading ? (
+            <div style={{
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              padding: '48px',
+              backgroundColor: 'white',
+              borderRadius: '12px',
+              border: '1px solid #e5e7eb'
+            }}>
+              Loading...
             </div>
-
-            <ProductGrid
-              products={products}
-              setSelectedProduct={setSelectedProduct}
-              showTax={showTax}
-            />
-
-            {selectedProduct && (
-              <ProductModal
-                product={selectedProduct}
-                onClose={() => setSelectedProduct(null)}
+          ) : (
+            <>
+              <ProductGrid
+                products={products}
+                setSelectedProduct={setSelectedProduct}
                 showTax={showTax}
               />
-            )}
 
-            <Pagination
-              currentPage={currentPage}
-              totalPages={totalPages}
-              paginate={paginate}
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={paginate}
+              />
+            </>
+          )}
+
+          {selectedProduct && (
+            <ProductModal
+              product={selectedProduct}
+              onClose={() => setSelectedProduct(null)}
+              showTax={showTax}
             />
-          </>
-        )}
+          )}
+        </div>
       </div>
     </div>
   );

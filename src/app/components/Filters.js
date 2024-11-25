@@ -119,41 +119,22 @@ export default function Filters({
 
       {/* Manufacturers Section */}
       <div>
-        <h3 
-          onClick={() => setIsManufacturersExpanded(!isManufacturersExpanded)}
-          style={{ 
-            fontSize: '16px', 
-            fontWeight: '600',
-            marginBottom: isManufacturersExpanded ? '16px' : '0',
-            color: '#111827',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            cursor: 'pointer',
-            userSelect: 'none'
-          }}>
+        <h3 style={{ 
+          fontSize: '16px', 
+          fontWeight: '600',
+          marginBottom: '16px',
+          color: '#111827',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px'
+        }}>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <path d="M12 2L2 7l10 5 10-5v11a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-            <path d="M9 22V12h6v10" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
           Manufacturers
-          <svg 
-            width="20" 
-            height="20" 
-            viewBox="0 0 24 24" 
-            fill="none" 
-            stroke="currentColor"
-            style={{
-              marginLeft: 'auto',
-              transform: isManufacturersExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
-              transition: 'transform 0.2s ease-in-out'
-            }}
-          >
-            <path d="M19 9l-7 7-7-7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
         </h3>
         <div style={{ 
-          display: isManufacturersExpanded ? 'flex' : 'none', 
+          display: 'flex', 
           flexDirection: 'column', 
           gap: '10px',
           backgroundColor: '#f9fafb',
@@ -168,8 +149,7 @@ export default function Filters({
             cursor: 'pointer',
             padding: '8px 12px',
             borderRadius: '6px',
-            backgroundColor: selectedManufacturer === 'all' ? '#e5e7eb' : 'transparent',
-            transition: 'all 0.2s'
+            backgroundColor: selectedManufacturer === 'all' ? '#e5e7eb' : 'transparent'
           }}>
             <input
               type="radio"
@@ -186,41 +166,58 @@ export default function Filters({
               All Manufacturers ({manufacturerCounts.reduce((sum, m) => sum + m.count, 0)})
             </span>
           </label>
-          {manufacturerCounts.map(({ manufacturer, count }) => (
-            <label
-              key={manufacturer}
-              style={{ 
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                fontSize: '14px',
+          {manufacturerCounts
+            .slice(0, isManufacturersExpanded ? undefined : 5)
+            .map(({ manufacturer, count }) => (
+              <label
+                key={manufacturer}
+                style={{ 
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  fontSize: '14px',
+                  cursor: 'pointer',
+                  padding: '8px 12px',
+                  borderRadius: '6px',
+                  backgroundColor: selectedManufacturer === manufacturer ? '#e5e7eb' : 'transparent'
+                }}
+              >
+                <input
+                  type="radio"
+                  name="manufacturer"
+                  value={manufacturer}
+                  checked={selectedManufacturer === manufacturer}
+                  onChange={(e) => handleManufacturerChange(e.target.value)}
+                  style={{ accentColor: '#2563eb' }}
+                />
+                <span style={{
+                  color: selectedManufacturer === manufacturer ? '#111827' : '#6b7280',
+                  fontWeight: selectedManufacturer === manufacturer ? '500' : '400'
+                }}>
+                  {manufacturer} ({count})
+                </span>
+              </label>
+            ))}
+          {manufacturerCounts.length > 5 && (
+            <button
+              onClick={() => setIsManufacturersExpanded(prev => !prev)}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: '#2563eb',
                 cursor: 'pointer',
+                fontSize: '14px',
                 padding: '8px 12px',
-                borderRadius: '6px',
-                backgroundColor: selectedManufacturer === manufacturer ? '#e5e7eb' : 'transparent',
-                transition: 'all 0.2s'
+                textAlign: 'left'
               }}
             >
-              <input
-                type="radio"
-                name="manufacturer"
-                value={manufacturer}
-                checked={selectedManufacturer === manufacturer}
-                onChange={(e) => handleManufacturerChange(e.target.value)}
-                style={{ accentColor: '#2563eb' }}
-              />
-              <span style={{
-                color: selectedManufacturer === manufacturer ? '#111827' : '#6b7280',
-                fontWeight: selectedManufacturer === manufacturer ? '500' : '400'
-              }}>
-                {manufacturer} ({count})
-              </span>
-            </label>
-          ))}
+              {isManufacturersExpanded ? 'Show Less' : `Show ${manufacturerCounts.length - 5} More`}
+            </button>
+          )}
         </div>
       </div>
 
-      {/* Sort by */}
+      {/* Sort Section */}
       <div>
         <h3 style={{ 
           fontSize: '16px', 
@@ -236,34 +233,54 @@ export default function Filters({
           </svg>
           Sort by
         </h3>
-        <select
-          value={sortBy}
-          onChange={(e) => handleSort(e.target.value)}
-          style={{
-            width: '100%',
-            padding: '12px',
-            borderRadius: '8px',
-            border: '1px solid #e5e7eb',
-            backgroundColor: 'white',
-            cursor: 'pointer',
-            fontSize: '14px',
-            color: '#374151',
-            appearance: 'none',
-            backgroundImage: `url("data:image/svg+xml,%3Csvg width='20' height='20' viewBox='0 0 24 24' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M6 9l6 6 6-6' stroke='%236B7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")`,
-            backgroundRepeat: 'no-repeat',
-            backgroundPosition: 'right 12px center',
-            fontWeight: '500'
-          }}
-        >
-          <option value="default">Default</option>
-          <option value="price-high">Price: High to Low</option>
-          <option value="price-low">Price: Low to High</option>
-          <option value="name-asc">Name: A to Z</option>
-          <option value="name-desc">Name: Z to A</option>
-        </select>
+        <div style={{ 
+          display: 'flex', 
+          flexDirection: 'column', 
+          gap: '10px',
+          backgroundColor: '#f9fafb',
+          padding: '12px',
+          borderRadius: '8px'
+        }}>
+          {[
+            { value: 'default', label: 'Default' },
+            { value: 'price-low', label: 'Price: Low to High' },
+            { value: 'price-high', label: 'Price: High to Low' },
+            { value: 'name-asc', label: 'Name: A to Z' },
+            { value: 'name-desc', label: 'Name: Z to A' }
+          ].map(({ value, label }) => (
+            <label
+              key={value}
+              style={{ 
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                fontSize: '14px',
+                cursor: 'pointer',
+                padding: '8px 12px',
+                borderRadius: '6px',
+                backgroundColor: sortBy === value ? '#e5e7eb' : 'transparent'
+              }}
+            >
+              <input
+                type="radio"
+                name="sort"
+                value={value}
+                checked={sortBy === value}
+                onChange={(e) => handleSort(e.target.value)}
+                style={{ accentColor: '#2563eb' }}
+              />
+              <span style={{
+                color: sortBy === value ? '#111827' : '#6b7280',
+                fontWeight: sortBy === value ? '500' : '400'
+              }}>
+                {label}
+              </span>
+            </label>
+          ))}
+        </div>
       </div>
 
-      {/* Price Range */}
+      {/* Price Range Section */}
       <div>
         <h3 style={{ 
           fontSize: '16px', 
@@ -275,55 +292,44 @@ export default function Filters({
           gap: '8px'
         }}>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
           Price Range
         </h3>
-        <div style={{
-          display: 'flex',
+        <div style={{ 
+          display: 'flex', 
           gap: '8px',
-          alignItems: 'center'
+          backgroundColor: '#f9fafb',
+          padding: '12px',
+          borderRadius: '8px'
         }}>
-          <div style={{ flex: 1 }}>
-            <input
-              type="number"
-              placeholder="Min"
-              value={priceRange.min}
-              onChange={(e) => handlePriceChange('min', e.target.value)}
-              style={{
-                width: '100%',
-                padding: '12px',
-                borderRadius: '8px',
-                border: '1px solid #e5e7eb',
-                fontSize: '14px',
-                backgroundColor: '#f9fafb',
-                color: '#374151',
-                fontWeight: '500'
-              }}
-            />
-          </div>
-          <span style={{ 
-            color: '#6b7280',
-            fontWeight: '500'
-          }}>-</span>
-          <div style={{ flex: 1 }}>
-            <input
-              type="number"
-              placeholder="Max"
-              value={priceRange.max}
-              onChange={(e) => handlePriceChange('max', e.target.value)}
-              style={{
-                width: '100%',
-                padding: '12px',
-                borderRadius: '8px',
-                border: '1px solid #e5e7eb',
-                fontSize: '14px',
-                backgroundColor: '#f9fafb',
-                color: '#374151',
-                fontWeight: '500'
-              }}
-            />
-          </div>
+          <input
+            type="number"
+            placeholder="Min"
+            value={priceRange.min}
+            onChange={(e) => handlePriceChange('min', e.target.value)}
+            style={{
+              flex: 1,
+              padding: '8px 12px',
+              borderRadius: '6px',
+              border: '1px solid #e5e7eb',
+              fontSize: '14px'
+            }}
+          />
+          <span style={{ color: '#6b7280' }}>-</span>
+          <input
+            type="number"
+            placeholder="Max"
+            value={priceRange.max}
+            onChange={(e) => handlePriceChange('max', e.target.value)}
+            style={{
+              flex: 1,
+              padding: '8px 12px',
+              borderRadius: '6px',
+              border: '1px solid #e5e7eb',
+              fontSize: '14px'
+            }}
+          />
         </div>
       </div>
     </div>

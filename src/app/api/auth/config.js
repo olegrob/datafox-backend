@@ -1,8 +1,7 @@
-import NextAuth from 'next-auth';
 import AzureADProvider from 'next-auth/providers/azure-ad';
 import { getDb } from '@/lib/db';
 
-const config = {
+export const authOptions = {
   providers: [
     AzureADProvider({
       clientId: process.env.AZURE_AD_CLIENT_ID,
@@ -10,6 +9,10 @@ const config = {
       tenantId: process.env.AZURE_AD_TENANT_ID,
     })
   ],
+  session: {
+    strategy: "jwt",
+    maxAge: 0 // Session expires when browser closes
+  },
   callbacks: {
     async signIn({ account, profile }) {
       if (account?.provider === 'azure-ad') {
@@ -24,12 +27,16 @@ const config = {
       return false;
     },
     async session({ session, token }) {
-      session.accessToken = token.accessToken;
+      if (token) {
+        session.user = token.user;
+        session.accessToken = token.accessToken;
+      }
       return session;
     },
-    async jwt({ token, account }) {
+    async jwt({ token, account, user }) {
       if (account) {
         token.accessToken = account.access_token;
+        token.user = user;
       }
       return token;
     }
@@ -39,8 +46,3 @@ const config = {
     error: '/auth/error'
   }
 };
-
-export const authOptions = config;
-const handler = NextAuth(config);
-
-export { handler as GET, handler as POST };

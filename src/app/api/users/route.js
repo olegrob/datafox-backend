@@ -1,11 +1,9 @@
-import { Database } from '@sqlitecloud/drivers';
 import { NextResponse } from 'next/server';
-
-const db = new Database('sqlitecloud://cwwcqlv7nk.sqlite.cloud:8860?apikey=AaNIeaKIdCsKAeNXUXeXLaTMpKCnKWqAysZXgZlBhzU');
+import { getDb } from '@/lib/db';
 
 async function initializeUsersTable() {
   try {
-    await db.sql('USE DATABASE products;');
+    const db = await getDb();
     
     // Check if users table exists
     const tableExists = await db.sql(`
@@ -40,7 +38,7 @@ initializeUsersTable().catch(console.error);
 
 export async function GET(request) {
   try {
-    await db.sql('USE DATABASE products;');
+    const db = await getDb();
     const users = await db.sql('SELECT id, email, name, role FROM users;');
     return NextResponse.json({ users });
   } catch (error) {
@@ -52,8 +50,7 @@ export async function GET(request) {
 export async function POST(request) {
   try {
     const { email, name, role = 'Regular', azure_id } = await request.json();
-    
-    await db.sql('USE DATABASE products;');
+    const db = await getDb();
     
     const result = await db.sql(`
       INSERT INTO users (email, name, role, azure_id)
@@ -73,8 +70,7 @@ export async function POST(request) {
 export async function PUT(request) {
   try {
     const { id, email, name, role } = await request.json();
-    
-    await db.sql('USE DATABASE products;');
+    const db = await getDb();
     
     await db.sql(`
       UPDATE users 

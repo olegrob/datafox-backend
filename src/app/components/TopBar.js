@@ -3,110 +3,138 @@
 export default function TopBar({ 
   searchQuery, 
   handleSearch, 
-  showInStock, 
-  handleStockFilter, 
-  sortBy, 
-  handleSort 
+  inStockOnly, 
+  handleInStockChange, 
+  totalProducts,
+  currentPage,
+  totalPages,
+  showTax,
+  setShowTax
 }) {
   return (
     <div style={{
-      backgroundColor: 'white',
-      padding: '16px',
-      borderRadius: '8px',
-      border: '1px solid #e5e7eb',
-      marginBottom: '24px',
-      position: 'sticky',
-      top: '20px',
-      zIndex: 1,
       display: 'flex',
       flexDirection: 'column',
-      gap: '16px'
+      gap: '16px',
+      marginBottom: '24px'
     }}>
-      {/* Search Bar */}
+      {/* Search and Filters */}
       <div style={{
-        display: 'flex',
-        gap: '12px',
-      }}>
-        <input
-          type="text"
-          placeholder="Search products..."
-          value={searchQuery}
-          onChange={handleSearch}
-          style={{
-            flex: 1,
-            padding: '12px 16px',
-            borderRadius: '8px',
-            border: '1px solid #e5e7eb',
-            fontSize: '14px',
-            backgroundColor: 'white',
-            color: '#111827',
-            outline: 'none',
-            transition: 'border-color 0.2s'
-          }}
-        />
-      </div>
-
-      {/* Availability and Sort */}
-      <div style={{ 
         display: 'flex',
         alignItems: 'center',
         gap: '16px',
+        padding: '16px 24px',
+        backgroundColor: 'white',
+        borderRadius: '12px',
+        border: '1px solid #e5e7eb',
+        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)'
       }}>
-        <button
-          onClick={handleStockFilter}
-          style={{
-            padding: '8px 12px',
-            borderRadius: '6px',
-            border: '1px solid #e5e7eb',
-            backgroundColor: showInStock ? '#2563eb' : 'white',
-            color: showInStock ? 'white' : '#374151',
-            cursor: 'pointer',
-            fontSize: '14px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            transition: 'all 0.2s',
-            fontWeight: '500',
-            boxShadow: showInStock ? '0 2px 4px rgba(37, 99, 235, 0.1)' : 'none'
-          }}
-        >
-          <div style={{
-            width: '16px',
-            height: '16px',
-            border: showInStock ? '2px solid white' : '2px solid #374151',
-            borderRadius: '4px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            transition: 'all 0.2s'
-          }}>
-            {showInStock && (
-              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white">
-                <path d="M20 6L9 17l-5-5" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-            )}
-          </div>
+        {/* Search Input */}
+        <div style={{ 
+          position: 'relative',
+          flex: 1 
+        }}>
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            style={{
+              position: 'absolute',
+              left: '12px',
+              top: '50%',
+              transform: 'translateY(-50%)',
+              color: '#9ca3af'
+            }}
+          >
+            <path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => handleSearch(e.target.value)}
+            placeholder="Search products..."
+            style={{
+              width: '100%',
+              padding: '12px 12px 12px 44px',
+              borderRadius: '8px',
+              border: '1px solid #e5e7eb',
+              fontSize: '14px',
+              backgroundColor: '#f9fafb',
+              color: '#374151'
+            }}
+          />
+        </div>
+
+        {/* In Stock Filter */}
+        <label style={{ 
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          fontSize: '14px',
+          cursor: 'pointer',
+          userSelect: 'none',
+          color: '#374151',
+          padding: '8px 16px',
+          borderRadius: '8px',
+          backgroundColor: inStockOnly ? '#f3f4f6' : 'transparent',
+          border: '1px solid #e5e7eb'
+        }}>
+          <input
+            type="checkbox"
+            checked={inStockOnly}
+            onChange={(e) => handleInStockChange(e.target.checked)}
+            style={{ accentColor: '#2563eb' }}
+          />
           In Stock Only
-        </button>
-        <select
-          value={sortBy}
-          onChange={(e) => handleSort(e.target.value)}
+        </label>
+      </div>
+
+      {/* Product Count and Page Info */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '16px',
+        padding: '0 8px',
+        color: '#6b7280',
+        fontSize: '14px',
+        fontWeight: '500'
+      }}>
+        <div>
+          {totalProducts} {totalProducts === 1 ? 'product' : 'products'} found
+        </div>
+        <div style={{ 
+          width: '4px', 
+          height: '4px', 
+          backgroundColor: 'currentColor', 
+          borderRadius: '50%' 
+        }} />
+        <button
+          onClick={() => setShowTax(prev => !prev)}
           style={{
-            padding: '8px 12px',
+            padding: '6px 12px',
             borderRadius: '6px',
             border: '1px solid #e5e7eb',
-            backgroundColor: 'white',
-            fontSize: '14px',
+            backgroundColor: showTax ? '#2563eb' : 'white',
+            color: showTax ? 'white' : '#374151',
             cursor: 'pointer',
-            color: '#374151'
+            fontSize: '14px',
+            fontWeight: '500',
+            transition: 'all 0.2s'
           }}
         >
-          <option value="default">Sort by: Default</option>
-          <option value="price-high">Sort by: Price High to Low</option>
-          <option value="price-low">Sort by: Price Low to High</option>
-          <option value="name-asc">Sort by: Name A to Z</option>
-          <option value="name-desc">Sort by: Name Z to A</option>
-        </select>
+          KM {showTax ? 'ON' : 'OFF'}
+        </button>
+        <div style={{ 
+          width: '4px', 
+          height: '4px', 
+          backgroundColor: 'currentColor', 
+          borderRadius: '50%' 
+        }} />
+        <div>
+          Page {currentPage} of {totalPages}
+        </div>
       </div>
     </div>
   );
