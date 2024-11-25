@@ -1,9 +1,14 @@
-import { getServerSession } from 'next-auth';
-import { authOptions } from './api/auth/config';
+'use client';
+
+import { useSession, signIn } from 'next-auth/react';
 import ProductPage from './components/ProductPage';
 
-export default async function Home() {
-  const session = await getServerSession(authOptions);
+export default function Home() {
+  const { data: session, status } = useSession();
+
+  if (status === 'loading') {
+    return null; // or a loading spinner
+  }
 
   if (!session) {
     return (
@@ -21,18 +26,16 @@ export default async function Home() {
             <p className="text-gray-400 text-lg mb-8">
               Streamline your product management workflow with our powerful and intuitive platform
             </p>
-            <form action="/api/auth/signin" method="POST">
-              <button
-                type="submit"
-                className="w-full bg-brand text-white px-8 py-4 rounded-lg font-semibold
-                         text-lg shadow-lg shadow-brand/30 hover:bg-brand/90 
-                         focus:outline-none focus:ring-2 focus:ring-brand/50 
-                         focus:ring-offset-2 focus:ring-offset-gray-900 
-                         transform transition-all duration-200 hover:scale-[1.02]"
-              >
-                Sign in with Microsoft
-              </button>
-            </form>
+            <button
+              onClick={() => signIn('azure-ad', { callbackUrl: '/' })}
+              className="w-full bg-brand text-white px-8 py-4 rounded-lg font-semibold
+                       text-lg shadow-lg shadow-brand/30 hover:bg-brand/90 
+                       focus:outline-none focus:ring-2 focus:ring-brand/50 
+                       focus:ring-offset-2 focus:ring-offset-gray-900 
+                       transform transition-all duration-200 hover:scale-[1.02]"
+            >
+              Sign In
+            </button>
           </div>
         </div>
 
