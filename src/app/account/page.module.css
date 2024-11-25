@@ -1,0 +1,126 @@
+.container {
+  max-width: 1200px;
+  margin: 2rem auto;
+  padding: 0 1rem;
+}
+
+.loading,
+.unauthorized {
+  text-align: center;
+  padding: 2rem;
+  font-size: 1.2rem;
+  color: #666;
+}
+
+.accountCard {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  padding: 2rem;
+}
+
+.title {
+  margin: 0 0 2rem 0;
+  color: #333;
+  font-size: 1.8rem;
+}
+
+.profileSection {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.profileHeader {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.avatarPlaceholder {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: #0078d4;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+  font-weight: 500;
+}
+
+.nameRole {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.name {
+  margin: 0;
+  font-size: 1.5rem;
+  color: #333;
+}
+
+.role {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  background: #e5e7eb;
+  border-radius: 9999px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #4b5563;
+}
+
+.adminRole {
+  background: #0078d4;
+  color: white;
+}
+
+.detailsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1.5rem;
+  margin-top: 1rem;
+}
+
+.detailItem {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.detailItem label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #6b7280;
+  text-transform: uppercase;
+}
+
+.detailItem div {
+  font-size: 1rem;
+  color: #111827;
+}
+
+@media (max-width: 640px) {
+  .container {
+    margin: 1rem auto;
+  }
+
+  .accountCard {
+    padding: 1.5rem;
+  }
+
+  .profileHeader {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .nameRole {
+    align-items: center;
+  }
+
+  .detailsGrid {
+    grid-template-columns: 1fr;
+  }
+}
