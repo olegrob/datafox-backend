@@ -34,6 +34,22 @@ export default function Header() {
           </div>
 
           <div className="flex items-center space-x-8">
+            {/* Navigation Links */}
+            <nav className="hidden md:flex space-x-6">
+              <Link 
+                href="/" 
+                className="text-gray-700 hover:text-brand font-medium transition-colors"
+              >
+                Tooted
+              </Link>
+              <Link 
+                href="/categories" 
+                className="text-gray-700 hover:text-brand font-medium transition-colors"
+              >
+                Kategooriad
+              </Link>
+            </nav>
+
             {/* Account Manager Info */}
             <div className="hidden md:flex flex-col text-right">
               <span className="text-gray-700 font-medium text-sm">Maria Kirtsi</span>

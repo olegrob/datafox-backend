@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { useSearchParams } from 'next/navigation';
 import ProductModal from './ProductModal';
 import Filters from './Filters';
 import TopBar from './TopBar';
@@ -8,6 +9,7 @@ import ProductGrid from './ProductGrid';
 import Pagination from './Pagination';
 
 export default function ProductPage() {
+  const searchParams = useSearchParams();
   const [products, setProducts] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -16,7 +18,7 @@ export default function ProductPage() {
   const [showTax, setShowTax] = useState(false);
   const [priceRange, setPriceRange] = useState({ min: '', max: '' });
   const [selectedManufacturer, setSelectedManufacturer] = useState('all');
-  const [selectedWarehouse, setSelectedWarehouse] = useState('all');
+  const [selectedWarehouse, setSelectedWarehouse] = useState(searchParams.get('warehouse') || 'all');
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -26,6 +28,15 @@ export default function ProductPage() {
   const [totalProducts, setTotalProducts] = useState(0);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [isManufacturersExpanded, setIsManufacturersExpanded] = useState(false);
+
+  // Set initial search query from URL category parameter
+  useEffect(() => {
+    const category = searchParams.get('category');
+    if (category) {
+      setSearchQuery(category);
+      setDebouncedSearch(category);
+    }
+  }, [searchParams]);
 
   // Debounce search query
   useEffect(() => {
@@ -41,10 +52,11 @@ export default function ProductPage() {
       setLoading(true);
       setError(null);
 
+      const category = searchParams.get('category');
       const params = new URLSearchParams({
         page: currentPage.toString(),
         limit: '30',
-        search: debouncedSearch,
+        ...(category ? { category } : { search: debouncedSearch }),
         sortBy,
         warehouse: selectedWarehouse,
         manufacturer: selectedManufacturer,

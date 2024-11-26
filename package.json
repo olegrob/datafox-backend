@@ -4,9 +4,10 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "node scripts/build.js && next build",
+    "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "create-sync-db": "node scripts/create-sync-db.js"
   },
   "dependencies": {
     "@azure/msal-node": "^2.16.2",

@@ -1,6 +1,6 @@
 'use client';
 
-export default function Pagination({ currentPage, totalPages, paginate }) {
+export default function Pagination({ currentPage, totalPages, onPageChange }) {
   if (totalPages <= 1) return null;
 
   return (
@@ -18,7 +18,7 @@ export default function Pagination({ currentPage, totalPages, paginate }) {
     }}>
       {/* Previous button */}
       <button
-        onClick={() => paginate(currentPage - 1)}
+        onClick={() => onPageChange(currentPage - 1)}
         disabled={currentPage === 1}
         style={{
           padding: '8px 16px',
@@ -34,8 +34,8 @@ export default function Pagination({ currentPage, totalPages, paginate }) {
           gap: '4px'
         }}
       >
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-          <path d="M10 12L6 8L10 4" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M10 12L6 8L10 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
         </svg>
         Previous
       </button>
@@ -52,7 +52,7 @@ export default function Pagination({ currentPage, totalPages, paginate }) {
           const pages = [];
           let startPage = Math.max(1, currentPage - 2);
           let endPage = Math.min(totalPages, startPage + 4);
-          
+
           if (endPage - startPage < 4) {
             startPage = Math.max(1, endPage - 4);
           }
@@ -62,7 +62,7 @@ export default function Pagination({ currentPage, totalPages, paginate }) {
             pages.push(
               <button
                 key={1}
-                onClick={() => paginate(1)}
+                onClick={() => onPageChange(1)}
                 style={{
                   padding: '8px 12px',
                   borderRadius: '6px',
@@ -81,7 +81,6 @@ export default function Pagination({ currentPage, totalPages, paginate }) {
                 1
               </button>
             );
-            
             if (startPage > 2) {
               pages.push(
                 <span key="dots1" style={{ color: '#6b7280' }}>...</span>
@@ -94,7 +93,7 @@ export default function Pagination({ currentPage, totalPages, paginate }) {
             pages.push(
               <button
                 key={i}
-                onClick={() => paginate(i)}
+                onClick={() => onPageChange(i)}
                 style={{
                   padding: '8px 12px',
                   borderRadius: '6px',
@@ -125,7 +124,7 @@ export default function Pagination({ currentPage, totalPages, paginate }) {
             pages.push(
               <button
                 key={totalPages}
-                onClick={() => paginate(totalPages)}
+                onClick={() => onPageChange(totalPages)}
                 style={{
                   padding: '8px 12px',
                   borderRadius: '6px',
@@ -152,7 +151,7 @@ export default function Pagination({ currentPage, totalPages, paginate }) {
 
       {/* Next button */}
       <button
-        onClick={() => paginate(currentPage + 1)}
+        onClick={() => onPageChange(currentPage + 1)}
         disabled={currentPage === totalPages}
         style={{
           padding: '8px 16px',
@@ -169,8 +168,8 @@ export default function Pagination({ currentPage, totalPages, paginate }) {
         }}
       >
         Next
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-          <path d="M6 12L10 8L6 4" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M6 12L10 8L6 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
         </svg>
       </button>
     </div>
