@@ -389,83 +389,155 @@ const ProductModal = ({ product, onClose, showTax }) => {
               {/* Price and Stock */}
               <div style={{
                 display: 'flex',
-                alignItems: 'center',
-                gap: '24px',
-                padding: '20px',
+                flexDirection: 'column',
+                gap: '16px',
+                padding: '24px',
                 backgroundColor: '#f8fafc',
-                borderRadius: '8px'
+                borderRadius: '12px',
+                border: '1px solid #e2e8f0'
               }}>
+                {/* Price Section */}
                 <div style={{
                   display: 'flex',
                   alignItems: 'baseline',
                   gap: '12px'
                 }}>
-                  {/* Main Price Display */}
-                  <span style={{
-                    fontSize: '32px',
-                    fontWeight: '600',
-                    color: '#111827',
+                  {/* Current Price */}
+                  <div style={{
                     display: 'flex',
-                    alignItems: 'baseline',
+                    flexDirection: 'column',
                     gap: '4px'
                   }}>
-                    €{showTax 
-                      ? calculatePriceWithTax(product.sale_price || product.regular_price).toFixed(2)
-                      : parseFloat(product.sale_price || product.regular_price).toFixed(2)
-                    }
-                    {showTax && (
-                      <span style={{
-                        fontSize: '14px',
-                        color: '#6b7280'
-                      }}>
-                        with VAT
-                      </span>
-                    )}
-                  </span>
-                  {/* Original Price if on Sale */}
-                  {product.sale_price && product.regular_price && parseFloat(product.sale_price) !== parseFloat(product.regular_price) && (
-                    <span style={{
-                      fontSize: '20px',
-                      color: '#ef4444',
-                      textDecoration: 'line-through'
+                    <div style={{
+                      fontSize: '28px',
+                      fontWeight: '700',
+                      color: '#111827',
+                      display: 'flex',
+                      alignItems: 'baseline',
+                      gap: '4px',
+                      letterSpacing: '-0.02em'
                     }}>
-                      €{showTax
-                        ? calculatePriceWithTax(product.regular_price).toFixed(2)
-                        : parseFloat(product.regular_price).toFixed(2)
-                      }
-                    </span>
-                  )}
+                      €{(() => {
+                        const regularPrice = parseFloat(product.regular_price || 0);
+                        const salePrice = parseFloat(product.sale_price || 0);
+                        const hasValidSale = salePrice > 0 && salePrice < regularPrice;
+                        const finalPrice = hasValidSale ? salePrice : regularPrice;
+                        return showTax 
+                          ? calculatePriceWithTax(finalPrice).toFixed(2)
+                          : finalPrice.toFixed(2);
+                      })()}
+                      {showTax && (
+                        <span style={{
+                          fontSize: '14px',
+                          fontWeight: '500',
+                          color: '#6b7280'
+                        }}>
+                          with VAT
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Original Price if on Sale */}
+                    {(() => {
+                      const regularPrice = parseFloat(product.regular_price || 0);
+                      const salePrice = parseFloat(product.sale_price || 0);
+                      return salePrice > 0 && salePrice < regularPrice && (
+                        <div style={{
+                          fontSize: '16px',
+                          color: '#ef4444',
+                          textDecoration: 'line-through',
+                          fontWeight: '500'
+                        }}>
+                          €{showTax
+                            ? calculatePriceWithTax(regularPrice).toFixed(2)
+                            : regularPrice.toFixed(2)
+                          }
+                        </div>
+                      );
+                    })()}
+                  </div>
+
+                  {/* Sale Badge */}
+                  {(() => {
+                    const regularPrice = parseFloat(product.regular_price || 0);
+                    const salePrice = parseFloat(product.sale_price || 0);
+                    if (salePrice > 0 && salePrice < regularPrice) {
+                      const discount = Math.round((1 - salePrice / regularPrice) * 100);
+                      return (
+                        <div style={{
+                          backgroundColor: '#fee2e2',
+                          color: '#ef4444',
+                          padding: '4px 8px',
+                          borderRadius: '6px',
+                          fontSize: '14px',
+                          fontWeight: '600',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px'
+                        }}>
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" strokeLinecap="round" strokeLinejoin="round"/>
+                          </svg>
+                          Save {discount}%
+                        </div>
+                      );
+                    }
+                    return null;
+                  })()}
                 </div>
+
+                {/* Stock and Warehouse Section */}
                 <div style={{
-                  marginLeft: 'auto',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '12px'
+                  gap: '16px',
+                  borderTop: '1px solid #e2e8f0',
+                  paddingTop: '16px'
                 }}>
-                  <span style={{
-                    fontSize: '16px',
-                    color: Number(product.stock) > 0 ? '#059669' : '#dc2626',
+                  {/* Stock Display */}
+                  <div style={{
                     display: 'flex',
                     alignItems: 'center',
                     gap: '8px'
                   }}>
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                      {Number(product.stock) > 0 
-                        ? <path d="M20 6L9 17l-5-5" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                        : <path d="M18 6L6 18M6 6l12 12" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                      }
-                    </svg>
-                    {Number(product.stock) > 0 ? `${product.stock} in stock` : 'Out of stock'}
-                  </span>
-                  <span style={{
-                    fontSize: '16px',
-                    color: '#6b7280',
+                    <div style={{
+                      width: '10px',
+                      height: '10px',
+                      borderRadius: '50%',
+                      backgroundColor: Number(product.stock) > 0 ? '#059669' : '#dc2626',
+                      border: '2px solid ${Number(product.stock) > 0 ? "#dcfce7" : "#fee2e2"}'
+                    }} />
+                    <span style={{
+                      fontSize: '15px',
+                      fontWeight: '500',
+                      color: Number(product.stock) > 0 ? '#059669' : '#dc2626'
+                    }}>
+                      {Number(product.stock) > 0 ? `${product.stock} in stock` : 'Out of stock'}
+                    </span>
+                  </div>
+
+                  {/* Warehouse Display */}
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
                     backgroundColor: '#f3f4f6',
-                    padding: '4px 12px',
-                    borderRadius: '6px'
+                    padding: '6px 12px',
+                    borderRadius: '8px',
+                    marginLeft: 'auto'
                   }}>
-                    {product.warehouse}
-                  </span>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6b7280" strokeWidth="2">
+                      <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" strokeLinecap="round" strokeLinejoin="round"/>
+                      <path d="M9 22V12h6v10" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                    <span style={{
+                      fontSize: '14px',
+                      fontWeight: '500',
+                      color: '#6b7280'
+                    }}>
+                      {product.warehouse}
+                    </span>
+                  </div>
                 </div>
               </div>
 

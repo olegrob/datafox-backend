@@ -190,10 +190,15 @@ export default function ProductGrid({ products, setSelectedProduct, showTax = fa
                   fontWeight: '600',
                   color: '#111827'
                 }}>
-                  €{showTax 
-                    ? calculatePriceWithTax(product.sale_price || product.regular_price).toFixed(2)
-                    : parseFloat(product.sale_price || product.regular_price).toFixed(2)
-                  }
+                  €{(() => {
+                    const regularPrice = parseFloat(product.regular_price || 0);
+                    const salePrice = parseFloat(product.sale_price || 0);
+                    const hasValidSale = salePrice > 0 && salePrice < regularPrice;
+                    const finalPrice = hasValidSale ? salePrice : regularPrice;
+                    return showTax 
+                      ? calculatePriceWithTax(finalPrice).toFixed(2)
+                      : finalPrice.toFixed(2);
+                  })()}
                   {showTax && (
                     <span style={{
                       fontSize: '12px',
@@ -204,19 +209,23 @@ export default function ProductGrid({ products, setSelectedProduct, showTax = fa
                     </span>
                   )}
                 </div>
-                {/* Show original price if there's a sale price */}
-                {product.sale_price && product.regular_price && parseFloat(product.sale_price) !== parseFloat(product.regular_price) && (
-                  <div style={{
-                    fontSize: '14px',
-                    color: '#ef4444',
-                    textDecoration: 'line-through'
-                  }}>
-                    €{showTax
-                      ? calculatePriceWithTax(product.regular_price).toFixed(2)
-                      : parseFloat(product.regular_price).toFixed(2)
-                    }
-                  </div>
-                )}
+                {/* Show original price only if there's a valid sale price that's lower */}
+                {(() => {
+                  const regularPrice = parseFloat(product.regular_price || 0);
+                  const salePrice = parseFloat(product.sale_price || 0);
+                  return salePrice > 0 && salePrice < regularPrice && (
+                    <div style={{
+                      fontSize: '14px',
+                      color: '#ef4444',
+                      textDecoration: 'line-through'
+                    }}>
+                      €{showTax
+                        ? calculatePriceWithTax(regularPrice).toFixed(2)
+                        : regularPrice.toFixed(2)
+                      }
+                    </div>
+                  );
+                })()}
               </div>
               <div style={{
                 fontSize: '14px',

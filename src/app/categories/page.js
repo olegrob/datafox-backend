@@ -24,6 +24,7 @@ export default function Categories() {
   const [showOnlyUnmapped, setShowOnlyUnmapped] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [categoryToDelete, setCategoryToDelete] = useState(null);
+  const [stats, setStats] = useState(null);
 
   // Fetch categories and their mappings
   useEffect(() => {
@@ -31,18 +32,20 @@ export default function Categories() {
       try {
         setLoading(true);
         setError(null);
-        const [categoriesRes, mappingsRes] = await Promise.all([
+        const [categoriesRes, mappingsRes, statsRes] = await Promise.all([
           fetch('/api/categories'),
-          fetch('/api/categories/mapping')
+          fetch('/api/categories/mapping'),
+          fetch('/api/categories/stats')
         ]);
 
-        if (!categoriesRes.ok || !mappingsRes.ok) {
+        if (!categoriesRes.ok || !mappingsRes.ok || !statsRes.ok) {
           throw new Error('Failed to fetch data');
         }
 
-        const [categoriesData, mappingsData] = await Promise.all([
+        const [categoriesData, mappingsData, statsData] = await Promise.all([
           categoriesRes.json(),
-          mappingsRes.json()
+          mappingsRes.json(),
+          statsRes.json()
         ]);
 
         const mappingsLookup = {};
@@ -55,6 +58,7 @@ export default function Categories() {
 
         setCategories(Array.isArray(categoriesData.categories) ? categoriesData.categories : []);
         setMappings(mappingsLookup);
+        setStats(statsData);
       } catch (error) {
         console.error('Error:', error);
         setError(error.message);
@@ -414,6 +418,64 @@ export default function Categories() {
 
   return (
     <div className="max-w-7xl mx-auto p-2">
+      {/* Statistics Dashboard */}
+      {stats && (
+        <div className="mb-8 bg-white rounded-lg shadow-lg p-6">
+          <h2 className="text-2xl font-bold mb-4">Mapping Statistics</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Product Stats */}
+            <div className="bg-green-50 p-4 rounded-lg">
+              <h3 className="text-lg font-semibold mb-2">Product Coverage</h3>
+              <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-600">Products in Mapped Categories</span>
+                  <span className="font-semibold">{stats.mappedProductCount.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-600">Total Active Products</span>
+                  <span className="font-semibold">{stats.totalProducts.toLocaleString()}</span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-2.5">
+                  <div 
+                    className="bg-green-600 h-2.5 rounded-full" 
+                    style={{ width: `${stats.mappedProductsPercentage}%` }}
+                  ></div>
+                </div>
+                <div className="text-right text-sm text-gray-600">
+                  {stats.mappedProductsPercentage}% of products have category mappings
+                </div>
+              </div>
+            </div>
+
+            {/* Stock Stats */}
+            <div className="bg-purple-50 p-4 rounded-lg">
+              <h3 className="text-lg font-semibold mb-2">Stock Distribution</h3>
+              <div className="space-y-2">
+                <div className="text-sm text-gray-600 mb-2">
+                  Stock quantity ranges:
+                </div>
+                {stats.stockDistribution && stats.stockDistribution.map((dist) => (
+                  <div key={dist.range} className="flex justify-between items-center text-sm">
+                    <span className="text-gray-600">{dist.range}:</span>
+                    <span className="font-semibold">{dist.count.toLocaleString()} products</span>
+                  </div>
+                ))}
+                <div className="mt-4 pt-4 border-t border-gray-200">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-600">Total Products</span>
+                    <span className="font-semibold">{stats.totalProducts.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between items-center mt-1">
+                    <span className="text-sm text-gray-600">Unique Categories</span>
+                    <span className="font-semibold">{stats.uniqueCategories.toLocaleString()}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      
       {/* Dashboard Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         <div className="bg-white p-4 rounded-lg shadow">
