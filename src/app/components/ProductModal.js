@@ -1,9 +1,11 @@
 'use client';
 import { useState, useEffect } from 'react';
+import { calculateFinalPrice } from '@/lib/priceCalculations';
 
-const ProductModal = ({ product, onClose, showTax }) => {
+const ProductModal = ({ product, onClose, showTax, showMarkup, pricingRules, shippingFees }) => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [showLargeImage, setShowLargeImage] = useState(false);
+  const [calculatedPrice, setCalculatedPrice] = useState(null);
 
   // Handle ESC key press
   useEffect(() => {
@@ -22,6 +24,21 @@ const ProductModal = ({ product, onClose, showTax }) => {
       window.removeEventListener('keydown', handleEsc);
     };
   }, [onClose, showLargeImage]);
+
+  useEffect(() => {
+    const calculatePrices = async () => {
+      const price = await calculateFinalPrice(
+        product,
+        pricingRules,
+        shippingFees
+      );
+      setCalculatedPrice(price);
+    };
+
+    if (showMarkup) {
+      calculatePrices();
+    }
+  }, [product, showMarkup, pricingRules, shippingFees]);
 
   let imageUrls = [];
   let attributes = {};
@@ -174,6 +191,21 @@ const ProductModal = ({ product, onClose, showTax }) => {
   };
 
   const formattedName = product.name.split('|').join(' • ');
+
+  const getBasePrice = () => {
+    const regularPrice = parseFloat(product.regular_price || 0);
+    const salePrice = parseFloat(product.sale_price || 0);
+    const hasValidSale = salePrice > 0 && salePrice < regularPrice;
+    return hasValidSale ? salePrice : regularPrice;
+  };
+
+  const displayPrice = showTax 
+    ? calculatePriceWithTax(getBasePrice())
+    : getBasePrice();
+
+  const calculateFinalDisplayPrice = (price) => {
+    return showTax ? calculatePriceWithTax(price) : price;
+  };
 
   return (
     <>
@@ -399,145 +431,172 @@ const ProductModal = ({ product, onClose, showTax }) => {
                 {/* Price Section */}
                 <div style={{
                   display: 'flex',
-                  alignItems: 'baseline',
+                  flexDirection: 'column',
                   gap: '12px'
                 }}>
-                  {/* Current Price */}
-                  <div style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '4px'
-                  }}>
-                    <div style={{
-                      fontSize: '28px',
-                      fontWeight: '700',
-                      color: '#111827',
-                      display: 'flex',
-                      alignItems: 'baseline',
-                      gap: '4px',
-                      letterSpacing: '-0.02em'
-                    }}>
-                      €{(() => {
+                  {showMarkup && calculatedPrice ? (
+                    <>
+                      <div style={{
+                        fontSize: '28px',
+                        fontWeight: '700',
+                        color: '#111827',
+                        display: 'flex',
+                        alignItems: 'baseline',
+                        gap: '4px',
+                        letterSpacing: '-0.02em'
+                      }}>
+                        €{calculateFinalDisplayPrice(calculatedPrice.finalPrice).toFixed(2)}
+                        {showTax && (
+                          <span style={{
+                            fontSize: '14px',
+                            fontWeight: '500',
+                            color: '#6b7280'
+                          }}>
+                            (incl. VAT)
+                          </span>
+                        )}
+                      </div>
+                      <div style={{
+                        fontSize: '14px',
+                        color: '#6b7280'
+                      }}>
+                        <div>
+                          Original Price: €{calculateFinalDisplayPrice(calculatedPrice.originalPrice).toFixed(2)}
+                        </div>
+                        <div>
+                          Markup: €{calculateFinalDisplayPrice(calculatedPrice.markupPrice - calculatedPrice.originalPrice).toFixed(2)} 
+                          {calculatedPrice.appliedRule && ` (${calculatedPrice.appliedRule.markup_percentage}%)`}
+                        </div>
+                        <div>
+                          Shipping: €{calculateFinalDisplayPrice(calculatedPrice.shippingFee).toFixed(2)}
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div style={{
+                        fontSize: '28px',
+                        fontWeight: '700',
+                        color: '#111827',
+                        display: 'flex',
+                        alignItems: 'baseline',
+                        gap: '4px',
+                        letterSpacing: '-0.02em'
+                      }}>
+                        €{displayPrice.toFixed(2)}
+                        {showTax && (
+                          <span style={{
+                            fontSize: '14px',
+                            fontWeight: '500',
+                            color: '#6b7280'
+                          }}>
+                            (incl. VAT)
+                          </span>
+                        )}
+                      </div>
+                      
+                      {/* Show original price if there's a sale */}
+                      {(() => {
                         const regularPrice = parseFloat(product.regular_price || 0);
                         const salePrice = parseFloat(product.sale_price || 0);
-                        const hasValidSale = salePrice > 0 && salePrice < regularPrice;
-                        const finalPrice = hasValidSale ? salePrice : regularPrice;
-                        return showTax 
-                          ? calculatePriceWithTax(finalPrice).toFixed(2)
-                          : finalPrice.toFixed(2);
+                        if (salePrice > 0 && salePrice < regularPrice) {
+                          return (
+                            <div style={{
+                              fontSize: '16px',
+                              color: '#ef4444',
+                              textDecoration: 'line-through',
+                              fontWeight: '500'
+                            }}>
+                              €{calculateFinalDisplayPrice(regularPrice).toFixed(2)}
+                            </div>
+                          );
+                        }
+                        return null;
                       })()}
-                      {showTax && (
-                        <span style={{
-                          fontSize: '14px',
-                          fontWeight: '500',
-                          color: '#6b7280'
-                        }}>
-                          with VAT
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Original Price if on Sale */}
-                    {(() => {
-                      const regularPrice = parseFloat(product.regular_price || 0);
-                      const salePrice = parseFloat(product.sale_price || 0);
-                      return salePrice > 0 && salePrice < regularPrice && (
-                        <div style={{
-                          fontSize: '16px',
-                          color: '#ef4444',
-                          textDecoration: 'line-through',
-                          fontWeight: '500'
-                        }}>
-                          €{showTax
-                            ? calculatePriceWithTax(regularPrice).toFixed(2)
-                            : regularPrice.toFixed(2)
-                          }
-                        </div>
-                      );
-                    })()}
-                  </div>
-
-                  {/* Sale Badge */}
-                  {(() => {
-                    const regularPrice = parseFloat(product.regular_price || 0);
-                    const salePrice = parseFloat(product.sale_price || 0);
-                    if (salePrice > 0 && salePrice < regularPrice) {
-                      const discount = Math.round((1 - salePrice / regularPrice) * 100);
-                      return (
-                        <div style={{
-                          backgroundColor: '#fee2e2',
-                          color: '#ef4444',
-                          padding: '4px 8px',
-                          borderRadius: '6px',
-                          fontSize: '14px',
-                          fontWeight: '600',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '4px'
-                        }}>
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" strokeLinecap="round" strokeLinejoin="round"/>
-                          </svg>
-                          Save {discount}%
-                        </div>
-                      );
-                    }
-                    return null;
-                  })()}
+                    </>
+                  )}
                 </div>
 
-                {/* Stock and Warehouse Section */}
+                {/* Sale Badge - only show if not showing markup */}
+                {!showMarkup && (() => {
+                  const regularPrice = parseFloat(product.regular_price || 0);
+                  const salePrice = parseFloat(product.sale_price || 0);
+                  if (salePrice > 0 && salePrice < regularPrice) {
+                    const discount = Math.round((1 - salePrice / regularPrice) * 100);
+                    return (
+                      <div style={{
+                        backgroundColor: '#fee2e2',
+                        color: '#ef4444',
+                        padding: '4px 8px',
+                        borderRadius: '6px',
+                        fontSize: '14px',
+                        fontWeight: '600',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px'
+                      }}>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                        Save {discount}%
+                      </div>
+                    );
+                  }
+                  return null;
+                })()}
+              </div>
+
+              {/* Stock and Warehouse Section */}
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '16px',
+                borderTop: '1px solid #e2e8f0',
+                paddingTop: '16px'
+              }}>
+                {/* Stock Display */}
                 <div style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '16px',
-                  borderTop: '1px solid #e2e8f0',
-                  paddingTop: '16px'
+                  gap: '8px'
                 }}>
-                  {/* Stock Display */}
                   <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px'
+                    width: '10px',
+                    height: '10px',
+                    borderRadius: '50%',
+                    backgroundColor: Number(product.stock) > 0 ? '#059669' : '#dc2626',
+                    border: '2px solid ${Number(product.stock) > 0 ? "#dcfce7" : "#fee2e2"}'
+                  }} />
+                  <span style={{
+                    fontSize: '15px',
+                    fontWeight: '500',
+                    color: Number(product.stock) > 0 ? '#059669' : '#dc2626'
                   }}>
-                    <div style={{
-                      width: '10px',
-                      height: '10px',
-                      borderRadius: '50%',
-                      backgroundColor: Number(product.stock) > 0 ? '#059669' : '#dc2626',
-                      border: '2px solid ${Number(product.stock) > 0 ? "#dcfce7" : "#fee2e2"}'
-                    }} />
-                    <span style={{
-                      fontSize: '15px',
-                      fontWeight: '500',
-                      color: Number(product.stock) > 0 ? '#059669' : '#dc2626'
-                    }}>
-                      {Number(product.stock) > 0 ? `${product.stock} in stock` : 'Out of stock'}
-                    </span>
-                  </div>
+                    {Number(product.stock) > 0 ? `${product.stock} in stock` : 'Out of stock'}
+                  </span>
+                </div>
 
-                  {/* Warehouse Display */}
-                  <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    backgroundColor: '#f3f4f6',
-                    padding: '6px 12px',
-                    borderRadius: '8px',
-                    marginLeft: 'auto'
+                {/* Warehouse Display */}
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  backgroundColor: '#f3f4f6',
+                  padding: '6px 12px',
+                  borderRadius: '8px',
+                  marginLeft: 'auto'
+                }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6b7280" strokeWidth="2">
+                    <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" strokeLinecap="round" strokeLinejoin="round"/>
+                    <path d="M9 22V12h6v10" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                  <span style={{
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    color: '#6b7280'
                   }}>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6b7280" strokeWidth="2">
-                      <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" strokeLinecap="round" strokeLinejoin="round"/>
-                      <path d="M9 22V12h6v10" strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
-                    <span style={{
-                      fontSize: '14px',
-                      fontWeight: '500',
-                      color: '#6b7280'
-                    }}>
-                      {product.warehouse}
-                    </span>
-                  </div>
+                    {product.warehouse}
+                  </span>
                 </div>
               </div>
 

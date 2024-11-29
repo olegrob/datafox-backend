@@ -5,35 +5,175 @@ let syncDb = null;
 
 export async function getDb(database = 'products') {
   try {
-    if (database === 'products' && productsDb) return productsDb;
-    if (database === 'sync' && syncDb) return syncDb;
+    // Return existing connection if available
+    if (globalThis.db?.[database]) {
+      return globalThis.db[database];
+    }
 
+    // Create new connection
     const db = new Database('sqlitecloud://cwwcqlv7nk.sqlite.cloud:8860?apikey=AaNIeaKIdCsKAeNXUXeXLaTMpKCnKWqAysZXgZlBhzU');
-    
-    // Use the specified database
-    await db.sql(`USE DATABASE ${database};`);
-    console.log(`Connected to ${database} database`);
-    
-    if (database === 'products') {
-      productsDb = db;
-      
-      // Create users table if it doesn't exist
+    await db.sql('USE DATABASE products;');
+
+    // Check and create tables if needed
+    const tables = await db.sql(`
+      SELECT name, sql FROM sqlite_master 
+      WHERE type='table'
+    `);
+    const tableNames = tables.map(t => t.name);
+
+    // Create shipping_templates table if it doesn't exist
+    if (!tableNames.includes('shipping_templates')) {
+      console.log('Creating shipping_templates table...');
       await db.sql(`
-        CREATE TABLE IF NOT EXISTS users (
+        CREATE TABLE shipping_templates (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
-          email TEXT NOT NULL UNIQUE,
-          name TEXT,
-          role TEXT CHECK(role IN ('Admin', 'Regular')) DEFAULT 'Regular',
-          azure_id TEXT UNIQUE,
+          name TEXT NOT NULL,
+          provider TEXT NOT NULL,
+          rules TEXT,
+          size_code TEXT,
+          min_weight DECIMAL(10,2),
+          max_weight DECIMAL(10,2),
+          min_volume DECIMAL(10,2),
+          max_volume DECIMAL(10,2),
+          base_fee DECIMAL(10,2),
           created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
           updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        );
+        )
       `);
-      console.log('Users table created/verified');
+      
+      // Insert default DPD template
+      const dpdTemplate = {
+        sizes: [
+          {
+            code: 'XS',
+            price: 2.65,
+            max_height: 61,
+            max_width: 36.5,
+            max_depth: 60,
+            max_weight: 31.5
+          },
+          {
+            code: 'S',
+            price: 3.10,
+            max_height: 61,
+            max_width: 36.5,
+            max_depth: 60,
+            max_weight: 31.5
+          },
+          {
+            code: 'M',
+            price: 4.15,
+            max_height: 61,
+            max_width: 36.5,
+            max_depth: 60,
+            max_weight: 31.5
+          },
+          {
+            code: 'L',
+            price: 5.10,
+            max_height: 61,
+            max_width: 36.5,
+            max_depth: 60,
+            max_weight: 31.5
+          }
+        ]
+      };
 
-      // Create sync_categories table
       await db.sql(`
-        CREATE TABLE IF NOT EXISTS sync_categories (
+        INSERT INTO shipping_templates (name, provider, rules)
+        VALUES (?, ?, ?)
+      `, ['DPD Parcel Machine', 'DPD', JSON.stringify(dpdTemplate)]);
+      
+      console.log('Shipping templates table created with default DPD template');
+    }
+
+    // Create or update shipping_fees table
+    if (!tableNames.includes('shipping_fees')) {
+      console.log('Creating shipping_fees table...');
+      await db.sql(`
+        CREATE TABLE shipping_fees (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          warehouse TEXT NOT NULL,
+          size_code TEXT,
+          min_weight DECIMAL(10,2),
+          max_weight DECIMAL(10,2),
+          min_volume DECIMAL(10,2),
+          max_volume DECIMAL(10,2),
+          base_fee DECIMAL(10,2) NOT NULL,
+          additional_fee_percentage DECIMAL(5,2) DEFAULT 0,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+      console.log('Shipping fees table created');
+    } else {
+      // Check if table needs migration
+      const shippingTable = tables.find(t => t.name === 'shipping_fees');
+      if (!shippingTable.sql.includes('size_code')) {
+        console.log('Migrating shipping_fees table...');
+        // Backup existing data
+        const existingData = await db.sql('SELECT * FROM shipping_fees');
+        
+        // Drop and recreate table
+        await db.sql('DROP TABLE shipping_fees');
+        await db.sql(`
+          CREATE TABLE shipping_fees (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            warehouse TEXT NOT NULL,
+            size_code TEXT,
+            min_weight DECIMAL(10,2),
+            max_weight DECIMAL(10,2),
+            min_volume DECIMAL(10,2),
+            max_volume DECIMAL(10,2),
+            base_fee DECIMAL(10,2) NOT NULL,
+            additional_fee_percentage DECIMAL(5,2) DEFAULT 0,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+          )
+        `);
+
+        // Restore data if any exists
+        if (existingData.length > 0) {
+          for (const row of existingData) {
+            await db.sql(`
+              INSERT INTO shipping_fees (
+                warehouse, base_fee, additional_fee_percentage,
+                min_weight, max_weight, min_volume, max_volume
+              ) VALUES (?, ?, ?, ?, ?, ?, ?)
+            `, [
+              row.warehouse,
+              row.base_fee,
+              row.additional_fee_percentage,
+              row.min_weight,
+              row.max_weight,
+              row.min_volume,
+              row.max_volume
+            ]);
+          }
+        }
+        console.log('Shipping fees table migrated successfully');
+      }
+    }
+
+    // Create users table if it doesn't exist
+    if (!tableNames.includes('users')) {
+      await db.sql(`
+        CREATE TABLE users (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          email TEXT UNIQUE NOT NULL,
+          name TEXT,
+          role TEXT DEFAULT 'User',
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+      console.log('Users table created');
+    }
+
+    // Create sync_categories table if it doesn't exist
+    if (!tableNames.includes('sync_categories')) {
+      await db.sql(`
+        CREATE TABLE sync_categories (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           original_category TEXT NOT NULL,
           mapped_category TEXT,
@@ -41,50 +181,48 @@ export async function getDb(database = 'products') {
           created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
           updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
           UNIQUE(original_category, warehouse)
-        );
+        )
       `);
-      console.log('Sync categories table created/verified');
-
-      // Create products table if it doesn't exist
-      await db.sql(`
-        CREATE TABLE IF NOT EXISTS products (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          name TEXT NOT NULL,
-          manufacturer TEXT NOT NULL,
-          short_description TEXT,
-          product_category TEXT,
-          warehouse TEXT,
-          price DECIMAL(10,2) NOT NULL,
-          quantity INTEGER NOT NULL DEFAULT 0,
-          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        );
-      `);
-      console.log('Products table created/verified');
-
-      // Add sample data if the products table is empty
-      const count = await db.sql('SELECT COUNT(*) as count FROM products');
-      if (count[0].count === 0) {
-        await db.sql(`
-          INSERT INTO products (name, manufacturer, product_category, warehouse, price, quantity) VALUES
-          ('Laptop X1', 'TechCorp', 'Electronics', 'Warehouse A', 999.99, 50),
-          ('Smartphone Y2', 'TechCorp', 'Electronics', 'Warehouse A', 599.99, 100),
-          ('Coffee Maker', 'HomeGoods', 'Appliances', 'Warehouse B', 79.99, 30),
-          ('Desk Chair', 'FurnitureCo', 'Furniture', 'Warehouse B', 199.99, 20),
-          ('Gaming Mouse', 'TechCorp', 'Electronics', 'Warehouse A', 49.99, 0),
-          ('Wireless Keyboard', 'TechCorp', 'Electronics', 'Warehouse A', 79.99, 45),
-          ('Blender Pro', 'HomeGoods', 'Appliances', 'Warehouse B', 129.99, 0),
-          ('Office Desk', 'FurnitureCo', 'Furniture', 'Warehouse B', 299.99, 15)
-        `);
-        console.log('Sample products data inserted');
-      }
-    } else if (database === 'sync') {
-      syncDb = db;
+      console.log('Sync categories table created');
     }
+
+    // Create products table if it doesn't exist
+    if (!tableNames.includes('products')) {
+      await db.sql(`
+        CREATE TABLE products (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          product_id TEXT NOT NULL,
+          warehouse TEXT NOT NULL,
+          manufacturer TEXT,
+          name TEXT,
+          short_description TEXT,
+          long_description TEXT,
+          regular_price DECIMAL(10,2),
+          sale_price DECIMAL(10,2),
+          stock INTEGER,
+          product_category TEXT,
+          external_image_urls TEXT,
+          product_attributes TEXT,
+          warranty_period TEXT,
+          wpsso_product_gtin13 TEXT,
+          wpsso_product_mfr_part_no TEXT,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          UNIQUE(product_id, warehouse)
+        )
+      `);
+      console.log('Products table created');
+    }
+
+    // Store the connection globally
+    if (!globalThis.db) {
+      globalThis.db = {};
+    }
+    globalThis.db[database] = db;
 
     return db;
   } catch (error) {
-    console.error(`Error connecting to ${database} database:`, error);
+    console.error('Error connecting to', database, 'database:', error);
     throw error;
   }
 }

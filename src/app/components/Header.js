@@ -48,6 +48,18 @@ export default function Header() {
               >
                 Kategooriad
               </Link>
+              <Link 
+                href="/attributes" 
+                className="text-gray-700 hover:text-brand font-medium transition-colors"
+              >
+                Atribuudid
+              </Link>
+              <Link 
+                href="/pricing" 
+                className="text-gray-700 hover:text-brand font-medium transition-colors"
+              >
+                Hinnastus
+              </Link>
             </nav>
 
             {/* Account Manager Info */}

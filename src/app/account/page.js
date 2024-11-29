@@ -1,71 +1,46 @@
 'use client';
 
 import { useSession } from 'next-auth/react';
-import styles from './page.module.css';
-import AuthGuard from '../components/AuthGuard';
+import TresoorConnection from '@/app/components/TresoorConnection';
 
 export default function AccountPage() {
   const { data: session, status } = useSession();
 
+  if (status === 'loading') {
+    return <div>Loading...</div>;
+  }
+
+  if (!session) {
+    return <div>Please sign in to access this page.</div>;
+  }
+
   return (
-    <AuthGuard>
-      <div className={styles.container}>
-        <div className={styles.accountCard}>
-          <h1 className={styles.title}>Account Details</h1>
-          
-          <div className={styles.profileSection}>
-            <div className={styles.profileHeader}>
-              <div className={styles.avatarPlaceholder}>
-                {session?.user?.name ? session.user.name[0].toUpperCase() : '?'}
-              </div>
-              <div className={styles.nameRole}>
-                <h2 className={styles.name}>{session?.user?.name}</h2>
-                <span className={`${styles.role} ${session?.user?.role === 'Admin' ? styles.adminRole : ''}`}>
-                  {session?.user?.role}
-                </span>
-              </div>
-            </div>
-
-            <div className={styles.detailsGrid}>
-              <div className={styles.detailItem}>
-                <label>Email</label>
-                <div>{session?.user?.email}</div>
-              </div>
-              
-              <div className={styles.detailItem}>
-                <label>Preferred Username</label>
-                <div>{session?.user?.preferredUsername || 'Not available'}</div>
-              </div>
-
-              {session?.user?.jobTitle && (
-                <div className={styles.detailItem}>
-                  <label>Job Title</label>
-                  <div>{session.user.jobTitle}</div>
-                </div>
-              )}
-
-              {session?.user?.department && (
-                <div className={styles.detailItem}>
-                  <label>Department</label>
-                  <div>{session.user.department}</div>
-                </div>
-              )}
-
-              {session?.user?.officeLocation && (
-                <div className={styles.detailItem}>
-                  <label>Office Location</label>
-                  <div>{session.user.officeLocation}</div>
-                </div>
-              )}
-
-              <div className={styles.detailItem}>
-                <label>Session Expires</label>
-                <div>{session?.expires}</div>
-              </div>
-            </div>
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <h1 className="text-2xl font-bold mb-8">Account Settings</h1>
+      
+      {/* Account Details Section */}
+      <div className="bg-white rounded-lg shadow p-6 mb-8">
+        <h2 className="text-xl font-semibold mb-4">Account Details</h2>
+        <div className="space-y-4">
+          <div>
+            <label className="text-sm text-gray-500">Name</label>
+            <div className="font-medium">{session.user.name}</div>
           </div>
+          <div>
+            <label className="text-sm text-gray-500">Email</label>
+            <div className="font-medium">{session.user.email}</div>
+          </div>
+          {session.user.role && (
+            <div>
+              <label className="text-sm text-gray-500">Role</label>
+              <div className="font-medium">{session.user.role}</div>
+            </div>
+          )}
         </div>
       </div>
-    </AuthGuard>
+
+      {/* Tresoor Connection Section */}
+      <TresoorConnection />
+    </div>
   );
 }

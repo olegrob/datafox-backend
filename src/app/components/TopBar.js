@@ -9,7 +9,9 @@ export default function TopBar({
   currentPage,
   totalPages,
   showTax,
-  setShowTax
+  setShowTax,
+  showMarkup,
+  setShowMarkup
 }) {
   return (
     <div style={{
@@ -135,6 +137,18 @@ export default function TopBar({
         <div>
           Page {currentPage} of {totalPages}
         </div>
+      </div>
+
+      <div className="flex items-center gap-4">
+        <label className="flex items-center gap-2">
+          <input
+            type="checkbox"
+            checked={showMarkup}
+            onChange={(e) => setShowMarkup(e.target.checked)}
+            className="rounded border-gray-300"
+          />
+          <span className="text-sm text-gray-600">Show Markup + Shipping</span>
+        </label>
       </div>
     </div>
   );

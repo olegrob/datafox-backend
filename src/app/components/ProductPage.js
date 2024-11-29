@@ -28,6 +28,9 @@ export default function ProductPage() {
   const [totalProducts, setTotalProducts] = useState(0);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [isManufacturersExpanded, setIsManufacturersExpanded] = useState(false);
+  const [showMarkup, setShowMarkup] = useState(false);
+  const [pricingRules, setPricingRules] = useState([]);
+  const [shippingFees, setShippingFees] = useState([]);
 
   // Set initial search query from URL category parameter
   useEffect(() => {
@@ -86,7 +89,7 @@ export default function ProductPage() {
     } finally {
       setLoading(false);
     }
-  }, [currentPage, debouncedSearch, selectedManufacturer, selectedWarehouse, showInStock, sortBy, priceRange]);
+  }, [currentPage, debouncedSearch, selectedManufacturer, selectedWarehouse, showInStock, sortBy, priceRange, searchParams]);
 
   useEffect(() => {
     fetchProducts();
@@ -128,6 +131,33 @@ export default function ProductPage() {
   const paginate = (pageNumber) => {
     setCurrentPage(pageNumber);
     window.scrollTo(0, 0);
+  };
+
+  useEffect(() => {
+    fetchPricingRules();
+    fetchShippingFees();
+  }, []);
+
+  const fetchPricingRules = async () => {
+    try {
+      const response = await fetch('/pricing/api/rules');
+      if (!response.ok) throw new Error('Failed to fetch pricing rules');
+      const data = await response.json();
+      setPricingRules(data.rules);
+    } catch (error) {
+      console.error('Error:', error);
+    }
+  };
+
+  const fetchShippingFees = async () => {
+    try {
+      const response = await fetch('/pricing/api/shipping');
+      if (!response.ok) throw new Error('Failed to fetch shipping fees');
+      const data = await response.json();
+      setShippingFees(data.fees);
+    } catch (error) {
+      console.error('Error:', error);
+    }
   };
 
   if (error) {
@@ -184,6 +214,8 @@ export default function ProductPage() {
             totalPages={totalPages}
             showTax={showTax}
             setShowTax={setShowTax}
+            showMarkup={showMarkup}
+            setShowMarkup={setShowMarkup}
           />
 
           {loading ? (
@@ -204,6 +236,9 @@ export default function ProductPage() {
                 products={products}
                 setSelectedProduct={setSelectedProduct}
                 showTax={showTax}
+                showMarkup={showMarkup}
+                pricingRules={pricingRules}
+                shippingFees={shippingFees}
               />
 
               <Pagination
@@ -219,6 +254,9 @@ export default function ProductPage() {
               product={selectedProduct}
               onClose={() => setSelectedProduct(null)}
               showTax={showTax}
+              showMarkup={showMarkup}
+              pricingRules={pricingRules}
+              shippingFees={shippingFees}
             />
           )}
         </div>
