@@ -11,6 +11,8 @@ const api = new WooCommerceRestApi({
   version: 'wc/v3'
 });
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request, { params }) {
   try {
     const session = await getServerSession(authOptions);
