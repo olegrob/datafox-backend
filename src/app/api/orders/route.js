@@ -1,5 +1,3 @@
-export const dynamic = 'force-dynamic';
-
 import { NextResponse } from 'next/server';
 import { dbService } from '@/lib/dbService';
 import { getServerSession } from 'next-auth';
@@ -7,6 +5,8 @@ import { authOptions } from '@/app/api/auth/config';
 import WooCommerceRestApi from '@woocommerce/woocommerce-rest-api';
 import { findOrCreateCustomer } from '@/lib/customerService';
 import { initializeTables } from '@/lib/migrations';
+
+export const dynamic = 'force-dynamic';
 
 export async function GET(request) {
   try {

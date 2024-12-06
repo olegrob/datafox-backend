@@ -3,8 +3,6 @@ import { getDb } from '@/lib/db';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/app/api/auth/config';
 
-export const dynamic = 'force-dynamic';
-
 export async function GET() {
   try {
     const session = await getServerSession(authOptions);
@@ -14,15 +12,12 @@ export async function GET() {
 
     const db = await getDb();
     const offers = await db.sql('SELECT * FROM offers ORDER BY created_at DESC');
-    
-    // Ensure offers is always an array
-    const offersArray = Array.isArray(offers) ? offers : [];
-    
-    return NextResponse.json({ offers: offersArray });
+
+    return NextResponse.json({ offers });
   } catch (error) {
     console.error('Error fetching offers:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch offers', details: error.message },
+      { error: 'Failed to fetch offers' },
       { status: 500 }
     );
   }

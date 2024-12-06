@@ -9,11 +9,13 @@ import AttributeStats from './components/AttributeStats';
 import AttributesExportImport from './components/AttributesExportImport';
 import Pagination from '../components/Pagination';
 
-export default function AttributesPage() {
+function LoadingSpinner() {
   return (
-    <Suspense fallback={<div>Loading...</div>}>
-      <AttributesContent />
-    </Suspense>
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="flex items-center justify-center min-h-[200px]">
+        <div className="animate-spin h-8 w-8 border-4 border-blue-500 border-t-transparent rounded-full"></div>
+      </div>
+    </div>
   );
 }
 
@@ -225,7 +227,7 @@ function AttributesContent() {
     return (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex items-center justify-center min-h-[200px]">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          <div className="animate-spin h-8 w-8 border-4 border-blue-500 border-t-transparent rounded-full"></div>
         </div>
       </div>
     );
@@ -415,3 +417,11 @@ function AttributesContent() {
     </div>
   );
 }
+
+export default function AttributesPage() {
+  return (
+    <Suspense fallback={<LoadingSpinner />}>
+      <AttributesContent />
+    </Suspense>
+  );
+} 

@@ -58,7 +58,13 @@ export default function OrdersPage() {
   const syncOrders = async () => {
     try {
       setIsSyncing(true);
-      const response = await fetch('/api/orders', { method: 'POST' });
+      const response = await fetch('/api/woocommerce/sync', { 
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ period: '90' }) // Default to 90 days
+      });
       if (!response.ok) throw new Error('Failed to sync orders');
       await fetchOrders(1); // Refresh first page after sync
     } catch (error) {
