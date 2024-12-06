@@ -5,8 +5,11 @@ import { authOptions } from '@/app/api/auth/config';
 import WooCommerceRestApi from '@woocommerce/woocommerce-rest-api';
 
 export const dynamic = 'force-dynamic';
-export const revalidate = 0;
-export const runtime = 'nodejs';
+
+// This tells Next.js that this route should be generated at build time
+export async function generateStaticParams() {
+  return [];
+}
 
 const api = new WooCommerceRestApi({
   url: process.env.WOOCOMMERCE_STORE_URL,
