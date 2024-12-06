@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { NextResponse } from 'next/server';
 import { dbService } from '@/lib/dbService';
 import { getServerSession } from 'next-auth';
