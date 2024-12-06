@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import AttributesList from './components/AttributesList';
@@ -9,17 +9,7 @@ import AttributeStats from './components/AttributeStats';
 import AttributesExportImport from './components/AttributesExportImport';
 import Pagination from '../components/Pagination';
 
-function LoadingSpinner() {
-  return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="flex items-center justify-center min-h-[200px]">
-        <div className="animate-spin h-8 w-8 border-4 border-blue-500 border-t-transparent rounded-full"></div>
-      </div>
-    </div>
-  );
-}
-
-function AttributesContent() {
+export default function AttributesPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -415,13 +405,5 @@ function AttributesContent() {
         </div>
       )}
     </div>
-  );
-}
-
-export default function AttributesPage() {
-  return (
-    <Suspense fallback={<LoadingSpinner />}>
-      <AttributesContent />
-    </Suspense>
   );
 } 

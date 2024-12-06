@@ -6,8 +6,6 @@ import WooCommerceRestApi from '@woocommerce/woocommerce-rest-api';
 import { findOrCreateCustomer } from '@/lib/customerService';
 import { initializeTables } from '@/lib/migrations';
 
-export const dynamic = 'force-dynamic';
-
 export async function GET(request) {
   try {
     const session = await getServerSession(authOptions);

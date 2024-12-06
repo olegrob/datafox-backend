@@ -4,8 +4,6 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/app/api/auth/config';
 import { createClientsTable } from '@/app/db/migrations/create_clients_table';
 
-export const dynamic = 'force-dynamic';
-
 export async function GET(request) {
   try {
     const url = new URL(request.url);

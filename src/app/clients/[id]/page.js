@@ -4,17 +4,9 @@ import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 import Toast from '@/app/components/Toast';
-import { useRouter } from 'next/navigation';
 
 export default function ClientDetailPage({ params }) {
-  const router = useRouter();
-  const { data: session, status } = useSession({
-    required: true,
-    onUnauthenticated() {
-      const currentPath = window.location.pathname;
-      router.push(`/api/auth/signin?callbackUrl=${encodeURIComponent(currentPath)}`);
-    },
-  });
+  const { data: session } = useSession();
   const [client, setClient] = useState(null);
   const [orders, setOrders] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -23,86 +15,37 @@ export default function ClientDetailPage({ params }) {
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const [editedData, setEditedData] = useState(null);
-  const [error, setError] = useState(null);
 
   useEffect(() => {
-    let isMounted = true;
+    fetchClientData();
+  }, []);
 
-    const fetchData = async () => {
-      if (status === 'authenticated' && session) {
-        try {
-          setIsLoading(true);
-          setError(null);
-          const response = await fetch(`/api/clients/${params.id}`, {
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${session.accessToken}`
-            },
-            credentials: 'include'
-          });
-          
-          if (!response.ok) {
-            if (response.status === 401) {
-              const currentPath = window.location.pathname;
-              router.push(`/api/auth/signin?callbackUrl=${encodeURIComponent(currentPath)}`);
-              throw new Error('Please sign in to view client details');
-            }
-            throw new Error('Failed to fetch client');
-          }
-          
-          const data = await response.json();
-          if (isMounted) {
-            setClient(data.client);
-            setOrders(data.orders);
-            setEditedData(data.client);
-          }
-        } catch (error) {
-          console.error('Error:', error);
-          if (isMounted) {
-            setError(error.message);
-          }
-        } finally {
-          if (isMounted) {
-            setIsLoading(false);
-          }
-        }
-      }
-    };
-
-    fetchData();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [status, session, params.id, router]);
+  const fetchClientData = async () => {
+    try {
+      setIsLoading(true);
+      const response = await fetch(`/api/clients/${params.id}`);
+      if (!response.ok) throw new Error('Failed to fetch client');
+      const data = await response.json();
+      setClient(data.client);
+      setOrders(data.orders);
+      setEditedData(data.client);
+    } catch (error) {
+      console.error('Error:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleSave = async () => {
-    if (!session) {
-      const currentPath = window.location.pathname;
-      router.push(`/api/auth/signin?callbackUrl=${encodeURIComponent(currentPath)}`);
-      return;
-    }
-
     try {
       setIsSaving(true);
       const response = await fetch(`/api/clients/${params.id}`, {
         method: 'PUT',
-        headers: { 
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${session.accessToken}`
-        },
-        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(editedData)
       });
 
-      if (!response.ok) {
-        if (response.status === 401) {
-          const currentPath = window.location.pathname;
-          router.push(`/api/auth/signin?callbackUrl=${encodeURIComponent(currentPath)}`);
-          throw new Error('Please sign in to update client');
-        }
-        throw new Error('Failed to update client');
-      }
+      if (!response.ok) throw new Error('Failed to update client');
       
       setClient(editedData);
       setIsEditing(false);
@@ -110,28 +53,12 @@ export default function ClientDetailPage({ params }) {
       setShowToast(true);
     } catch (error) {
       console.error('Error:', error);
-      setToastMessage(error.message);
+      setToastMessage('Failed to update client');
       setShowToast(true);
     } finally {
       setIsSaving(false);
     }
   };
-
-  if (status === 'loading') {
-    return (
-      <div className="container mx-auto px-4 py-8 flex justify-center">
-        <svg className="animate-spin h-8 w-8 text-blue-600" viewBox="0 0 24 24">
-          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-        </svg>
-      </div>
-    );
-  }
-
-  if (status === 'unauthenticated') {
-    router.push('/api/auth/signin');
-    return null;
-  }
 
   if (isLoading) {
     return (
@@ -140,22 +67,6 @@ export default function ClientDetailPage({ params }) {
           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
         </svg>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="text-red-600">{error}</div>
-      </div>
-    );
-  }
-
-  if (!client) {
-    return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="text-gray-600">Client not found</div>
       </div>
     );
   }

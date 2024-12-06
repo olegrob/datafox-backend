@@ -7,28 +7,11 @@ export const authOptions = {
       clientId: process.env.AZURE_AD_CLIENT_ID,
       clientSecret: process.env.AZURE_AD_CLIENT_SECRET,
       tenantId: process.env.AZURE_AD_TENANT_ID,
-      authorization: {
-        params: {
-          scope: "openid profile email offline_access"
-        }
-      }
     })
   ],
   session: {
     strategy: "jwt",
-    maxAge: 24 * 60 * 60, // 24 hours
-    updateAge: 60 * 60, // 1 hour
-  },
-  cookies: {
-    sessionToken: {
-      name: `next-auth.session-token`,
-      options: {
-        httpOnly: true,
-        sameSite: 'lax',
-        path: '/',
-        secure: process.env.NODE_ENV === 'production'
-      }
-    }
+    maxAge: 0 // Session expires when browser closes
   },
   callbacks: {
     async signIn({ account, profile }) {
@@ -45,22 +28,15 @@ export const authOptions = {
     },
     async session({ session, token }) {
       if (token) {
-        session.user = token.user || session.user;
+        session.user = token.user;
         session.accessToken = token.accessToken;
-        session.error = token.error;
-        session.idToken = token.idToken;
       }
       return session;
     },
-    async jwt({ token, account, user, profile }) {
+    async jwt({ token, account, user }) {
       if (account) {
         token.accessToken = account.access_token;
-        token.refreshToken = account.refresh_token;
-        token.idToken = account.id_token;
-        token.user = {
-          ...user,
-          ...profile
-        };
+        token.user = user;
       }
       return token;
     }
@@ -68,6 +44,5 @@ export const authOptions = {
   pages: {
     signIn: '/',
     error: '/auth/error'
-  },
-  debug: process.env.NODE_ENV === 'development',
+  }
 };

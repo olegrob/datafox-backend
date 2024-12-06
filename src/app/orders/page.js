@@ -1,19 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useSession, signIn } from 'next-auth/react';
+import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 import { useDebounce } from '@/hooks/useDebounce';
-import { useRouter } from 'next/navigation';
 
 export default function OrdersPage() {
-  const { data: session, status } = useSession({
-    required: true,
-    onUnauthenticated() {
-      signIn('azure-ad');
-    },
-  });
-  const router = useRouter();
+  const { data: session, status } = useSession();
   const [orders, setOrders] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
@@ -27,10 +20,10 @@ export default function OrdersPage() {
   const [debouncedSearch] = useDebounce(searchTerm, 300);
 
   useEffect(() => {
-    if (status === 'authenticated' && session?.accessToken) {
+    if (status === 'authenticated') {
       fetchOrders(pagination.page);
     }
-  }, [pagination.page, debouncedSearch, status, session]);
+  }, [pagination.page, debouncedSearch, status]);
 
   const fetchOrders = async (page) => {
     try {
@@ -42,17 +35,11 @@ export default function OrdersPage() {
         {
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${session?.accessToken}`
           },
-          credentials: 'include'
         }
       );
 
       if (!response.ok) {
-        if (response.status === 401) {
-          signIn('azure-ad');
-          return;
-        }
         const errorData = await response.json();
         throw new Error(errorData.error || 'Failed to fetch orders');
       }
@@ -69,38 +56,11 @@ export default function OrdersPage() {
   };
 
   const syncOrders = async () => {
-    if (!session?.accessToken) {
-      signIn('azure-ad');
-      return;
-    }
-
     try {
       setIsSyncing(true);
-      setError(null);
-      const response = await fetch('/api/orders/sync', { 
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.accessToken}`
-        },
-        credentials: 'include',
-        body: JSON.stringify({ period: '90' }) // Default to 90 days
-      });
-
-      if (!response.ok) {
-        if (response.status === 401) {
-          signIn('azure-ad');
-          return;
-        }
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to sync orders');
-      }
-
-      // Refresh first page after sync
-      await fetchOrders(1);
-      
-      // Show success message
-      setError(null);
+      const response = await fetch('/api/orders', { method: 'POST' });
+      if (!response.ok) throw new Error('Failed to sync orders');
+      await fetchOrders(1); // Refresh first page after sync
     } catch (error) {
       console.error('Error:', error);
       setError(error.message);
