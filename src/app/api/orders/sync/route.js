@@ -4,14 +4,23 @@ import { authOptions } from '@/app/api/auth/config';
 import { getDb } from '@/lib/db';
 import WooCommerceRestApi from '@woocommerce/woocommerce-rest-api';
 
-const api = new WooCommerceRestApi({
-  url: process.env.WOOCOMMERCE_STORE_URL,
-  consumerKey: process.env.WOOCOMMERCE_CONSUMER_KEY,
-  consumerSecret: process.env.WOOCOMMERCE_CONSUMER_SECRET,
-  version: "wc/v3"
-});
+// Make the route dynamic
+export const dynamic = 'force-dynamic';
+export const dynamicParams = true;
+export const revalidate = 0;
+
+// Initialize WooCommerce API in the handler to ensure it's only created when needed
+async function getWooCommerceApi() {
+  return new WooCommerceRestApi({
+    url: process.env.WOOCOMMERCE_STORE_URL,
+    consumerKey: process.env.WOOCOMMERCE_CONSUMER_KEY,
+    consumerSecret: process.env.WOOCOMMERCE_CONSUMER_SECRET,
+    version: "wc/v3"
+  });
+}
 
 async function fetchOrdersForPeriod(startDate, endDate) {
+  const api = await getWooCommerceApi();
   const orders = await api.get("orders", {
     after: startDate.toISOString(),
     before: endDate ? endDate.toISOString() : undefined,
