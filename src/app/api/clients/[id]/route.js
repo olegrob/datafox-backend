@@ -5,7 +5,8 @@ import { authOptions } from '@/app/api/auth/config';
 import WooCommerceRestApi from '@woocommerce/woocommerce-rest-api';
 
 export const dynamic = 'force-dynamic';
-export const fetchCache = 'force-no-store';
+export const revalidate = 0;
+export const runtime = 'nodejs';
 
 const api = new WooCommerceRestApi({
   url: process.env.WOOCOMMERCE_STORE_URL,

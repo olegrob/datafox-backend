@@ -4,7 +4,8 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/app/api/auth/config';
 
 export const dynamic = 'force-dynamic';
-export const fetchCache = 'force-no-store';
+export const revalidate = 0;
+export const runtime = 'nodejs';
 
 export async function GET(request, { params }) {
   try {
