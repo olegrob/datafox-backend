@@ -11,7 +11,19 @@ export const authOptions = {
   ],
   session: {
     strategy: "jwt",
-    maxAge: 0 // Session expires when browser closes
+    maxAge: 24 * 60 * 60, // 24 hours
+    updateAge: 60 * 60, // 1 hour
+  },
+  cookies: {
+    sessionToken: {
+      name: `next-auth.session-token`,
+      options: {
+        httpOnly: true,
+        sameSite: 'lax',
+        path: '/',
+        secure: process.env.NODE_ENV === 'production'
+      }
+    }
   },
   callbacks: {
     async signIn({ account, profile }) {
@@ -30,13 +42,15 @@ export const authOptions = {
       if (token) {
         session.user = token.user;
         session.accessToken = token.accessToken;
+        session.error = token.error;
       }
       return session;
     },
-    async jwt({ token, account, user }) {
+    async jwt({ token, account, user, profile }) {
       if (account) {
         token.accessToken = account.access_token;
         token.user = user;
+        token.profile = profile;
       }
       return token;
     }
@@ -44,5 +58,6 @@ export const authOptions = {
   pages: {
     signIn: '/',
     error: '/auth/error'
-  }
+  },
+  debug: process.env.NODE_ENV === 'development',
 };

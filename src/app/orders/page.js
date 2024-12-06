@@ -35,7 +35,9 @@ export default function OrdersPage() {
         {
           headers: {
             'Content-Type': 'application/json',
+            Authorization: `Bearer ${session?.accessToken}`
           },
+          credentials: 'include'
         }
       );
 
@@ -56,17 +58,34 @@ export default function OrdersPage() {
   };
 
   const syncOrders = async () => {
+    if (!session) {
+      setError('Please sign in to sync orders');
+      return;
+    }
+
     try {
       setIsSyncing(true);
-      const response = await fetch('/api/woocommerce/sync', { 
+      setError(null);
+      const response = await fetch('/api/orders/sync', { 
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.accessToken}`
         },
+        credentials: 'include',
         body: JSON.stringify({ period: '90' }) // Default to 90 days
       });
-      if (!response.ok) throw new Error('Failed to sync orders');
-      await fetchOrders(1); // Refresh first page after sync
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to sync orders');
+      }
+
+      // Refresh first page after sync
+      await fetchOrders(1);
+      
+      // Show success message
+      setError(null);
     } catch (error) {
       console.error('Error:', error);
       setError(error.message);
