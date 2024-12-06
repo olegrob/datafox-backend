@@ -2,9 +2,11 @@
 
 import { useSession, signIn } from 'next-auth/react';
 import ProductPage from './components/ProductPage';
+import { useState } from 'react';
 
 export default function Home() {
   const { data: session, status } = useSession();
+  const [showTax, setShowTax] = useState(false);
 
   if (status === 'loading') {
     return null; // or a loading spinner

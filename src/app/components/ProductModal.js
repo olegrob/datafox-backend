@@ -1,11 +1,15 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { calculateFinalPrice } from '@/lib/priceCalculations';
+import { useCart } from '@/lib/cartContext';
+import Toast from './Toast';
 
 const ProductModal = ({ product, onClose, showTax, showMarkup, pricingRules, shippingFees }) => {
+  const { addToCart } = useCart();
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [showLargeImage, setShowLargeImage] = useState(false);
   const [calculatedPrice, setCalculatedPrice] = useState(null);
+  const [showToast, setShowToast] = useState(false);
 
   // Handle ESC key press
   useEffect(() => {
@@ -205,6 +209,14 @@ const ProductModal = ({ product, onClose, showTax, showMarkup, pricingRules, shi
 
   const calculateFinalDisplayPrice = (price) => {
     return showTax ? calculatePriceWithTax(price) : price;
+  };
+
+  const handleAddToCart = () => {
+    addToCart(product);
+    setShowToast(true);
+    setTimeout(() => {
+      onClose();
+    }, 1000); // Close modal after 1 second
   };
 
   return (
@@ -468,7 +480,7 @@ const ProductModal = ({ product, onClose, showTax, showMarkup, pricingRules, shi
                           {calculatedPrice.appliedRule && ` (${calculatedPrice.appliedRule.markup_percentage}%)`}
                         </div>
                         <div>
-                          Shipping: €{calculateFinalDisplayPrice(calculatedPrice.shippingFee).toFixed(2)}
+                          Shipping: {calculateFinalDisplayPrice(calculatedPrice.shippingFee).toFixed(2)}
                         </div>
                       </div>
                     </>
@@ -730,6 +742,31 @@ const ProductModal = ({ product, onClose, showTax, showMarkup, pricingRules, shi
                   {renderSpecifications(specifications.additional)}
                 </div>
               </div>
+
+              {/* Add this after the price section */}
+              <div className="flex gap-4 mt-6">
+                <button
+                  onClick={handleAddToCart}
+                  className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 
+                             font-medium transition-colors duration-200 flex items-center justify-center gap-2"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-5 w-5"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"
+                    />
+                  </svg>
+                  Add to Cart
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -790,6 +827,14 @@ const ProductModal = ({ product, onClose, showTax, showMarkup, pricingRules, shi
             </button>
           </div>
         </div>
+      )}
+
+      {showToast && (
+        <Toast
+          message={`${product.name} added to cart`}
+          type="success"
+          onClose={() => setShowToast(false)}
+        />
       )}
     </>
   );

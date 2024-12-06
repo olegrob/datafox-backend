@@ -7,6 +7,7 @@ import Filters from './Filters';
 import TopBar from './TopBar';
 import ProductGrid from './ProductGrid';
 import Pagination from './Pagination';
+import KmToggle from './KmToggle';
 
 export default function ProductPage() {
   const searchParams = useSearchParams();

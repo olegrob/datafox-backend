@@ -2,162 +2,153 @@
 
 import { useState, useEffect } from 'react';
 
-export default function AttributeStats({ attributes }) {
-  const [warehouseStats, setWarehouseStats] = useState({});
-  const [isLoading, setIsLoading] = useState(true);
-  
-  useEffect(() => {
-    const fetchWarehouseStats = async () => {
-      try {
-        setIsLoading(true);
-        const response = await fetch('/api/attributes/warehouse-stats');
-        if (!response.ok) throw new Error('Failed to fetch warehouse stats');
-        const data = await response.json();
-        setWarehouseStats(data.stats || {});
-      } catch (error) {
-        console.error('Error fetching warehouse stats:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
+export default function AttributeStats() {
+  const [stats, setStats] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-    fetchWarehouseStats();
+  useEffect(() => {
+    fetchStats();
   }, []);
 
-  // Calculate translation stats
-  const translationStats = attributes.reduce((acc, attr) => {
-    if (attr.ee_translation) acc.estonian++;
-    if (attr.en_translation) acc.english++;
-    if (attr.ru_translation) acc.russian++;
-    return acc;
-  }, { estonian: 0, english: 0, russian: 0 });
-
-  // Calculate type stats
-  const typeStats = attributes.reduce((acc, attr) => {
-    const type = attr.attribute_type || 'text';
-    acc[type] = (acc[type] || 0) + 1;
-    return acc;
-  }, {});
-
-  // Calculate attribute usage stats
-  const usageStats = {
-    total: attributes.length,
-    translated: attributes.filter(attr => 
-      attr.ee_translation || attr.en_translation || attr.ru_translation
-    ).length,
-    active: attributes.filter(attr => attr.is_active).length,
-    types: Object.keys(typeStats).length
+  const fetchStats = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch('/api/attributes/stats');
+      if (!response.ok) {
+        throw new Error('Failed to fetch stats');
+      }
+      const data = await response.json();
+      setStats(data);
+    } catch (error) {
+      console.error('Error fetching stats:', error);
+      setError(error.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-      {/* Warehouse Distribution */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <h3 className="text-lg font-semibold mb-4">Warehouse Distribution</h3>
-        {isLoading ? (
-          <div className="flex justify-center py-4">
-            <div className="animate-spin h-6 w-6 border-2 border-blue-500 border-t-transparent rounded-full"></div>
+  if (loading) {
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+        <div className="bg-white p-4 rounded-lg shadow animate-pulse">
+          <div className="h-6 bg-gray-200 rounded w-1/2 mb-4"></div>
+          <div className="space-y-2">
+            {[1, 2, 3, 4, 5].map(i => (
+              <div key={i} className="flex justify-between">
+                <div className="h-4 bg-gray-200 rounded w-1/4"></div>
+                <div className="h-4 bg-gray-200 rounded w-1/4"></div>
+              </div>
+            ))}
           </div>
-        ) : (
-          <div className="space-y-3">
-            {Object.entries(warehouseStats)
-              .sort(([, a], [, b]) => b - a) // Sort by count descending
-              .map(([warehouse, count]) => (
-                <div key={warehouse} className="flex items-center justify-between">
-                  <span className="text-gray-600">{warehouse}</span>
-                  <div className="flex items-center gap-2">
-                    <div className="h-2 bg-blue-100 rounded-full w-32 overflow-hidden">
-                      <div 
-                        className="h-full bg-blue-500 rounded-full"
-                        style={{ 
-                          width: `${(count / attributes.length) * 100}%` 
-                        }}
-                      />
-                    </div>
-                    <span className="text-sm text-gray-500">
-                      {count} ({Math.round((count / attributes.length) * 100)}%)
-                    </span>
-                  </div>
-                </div>
-              ))}
+        </div>
+        <div className="bg-white p-4 rounded-lg shadow animate-pulse">
+          <div className="h-6 bg-gray-200 rounded w-1/2 mb-4"></div>
+          <div className="space-y-2">
+            {[1, 2, 3].map(i => (
+              <div key={i} className="flex justify-between">
+                <div className="h-4 bg-gray-200 rounded w-1/4"></div>
+                <div className="h-4 bg-gray-200 rounded w-1/4"></div>
+              </div>
+            ))}
           </div>
-        )}
+        </div>
+        <div className="bg-white p-4 rounded-lg shadow animate-pulse">
+          <div className="h-6 bg-gray-200 rounded w-1/2 mb-4"></div>
+          <div className="space-y-2">
+            {[1, 2, 3, 4].map(i => (
+              <div key={i} className="flex justify-between">
+                <div className="h-4 bg-gray-200 rounded w-1/4"></div>
+                <div className="h-4 bg-gray-200 rounded w-1/4"></div>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
+    );
+  }
 
-      {/* Translation Progress */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <h3 className="text-lg font-semibold mb-4">Translation Progress</h3>
-        <div className="space-y-4">
-          {Object.entries(translationStats).map(([language, count]) => (
-            <div key={language} className="space-y-1">
-              <div className="flex justify-between text-sm">
-                <span className="capitalize text-gray-600">{language}</span>
-                <span className="text-gray-500">
-                  {Math.round((count / attributes.length) * 100)}%
-                </span>
-              </div>
-              <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                <div 
-                  className="h-full bg-green-500 rounded-full"
-                  style={{ 
-                    width: `${(count / attributes.length) * 100}%` 
-                  }}
-                />
-              </div>
+  if (error) {
+    return (
+      <div className="bg-red-50 border border-red-200 text-red-600 p-4 rounded-lg mb-6">
+        Error loading statistics: {error}
+      </div>
+    );
+  }
+
+  if (!stats) {
+    return null;
+  }
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+      {/* Warehouse Distribution */}
+      <div className="bg-white p-4 rounded-lg shadow">
+        <h3 className="text-lg font-semibold mb-3">Warehouse Distribution</h3>
+        <div className="space-y-2">
+          {stats.warehouses.map(({ warehouse, count }) => (
+            <div key={warehouse} className="flex justify-between text-sm">
+              <span>{warehouse}</span>
+              <span>
+                {count} ({((count / stats.total) * 100).toFixed(0)}%)
+              </span>
             </div>
           ))}
         </div>
       </div>
 
-      {/* Attribute Types */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <h3 className="text-lg font-semibold mb-4">Attribute Types</h3>
-        <div className="space-y-3">
-          {Object.entries(typeStats)
-            .sort(([, a], [, b]) => b - a) // Sort by count descending
-            .map(([type, count]) => (
-              <div key={type} className="flex items-center justify-between">
-                <span className="capitalize text-gray-600">{type}</span>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-gray-500">
-                    {count} ({Math.round((count / attributes.length) * 100)}%)
-                  </span>
-                </div>
-              </div>
-            ))}
+      {/* Translation Progress */}
+      <div className="bg-white p-4 rounded-lg shadow">
+        <h3 className="text-lg font-semibold mb-3">Translation Progress</h3>
+        <div className="space-y-2">
+          {['estonian', 'english', 'russian'].map(lang => (
+            <div key={lang} className="flex justify-between text-sm">
+              <span className="capitalize">{lang}</span>
+              <span>
+                {((stats.translations[lang] / stats.translations.total) * 100).toFixed(0)}%
+              </span>
+            </div>
+          ))}
         </div>
       </div>
 
-      {/* Overall Stats */}
-      <div className="bg-white rounded-lg shadow p-6 md:col-span-3">
-        <h3 className="text-lg font-semibold mb-4">Overall Statistics</h3>
+      {/* Overall Statistics */}
+      <div className="bg-white p-4 rounded-lg shadow">
+        <h3 className="text-lg font-semibold mb-3">Overall Statistics</h3>
+        <div className="space-y-2">
+          <div className="flex justify-between text-sm">
+            <span>Total Attributes</span>
+            <span>{stats.total.toLocaleString()}</span>
+          </div>
+          <div className="flex justify-between text-sm">
+            <span>Translated</span>
+            <span>{stats.translatedCount.toLocaleString()}</span>
+          </div>
+          <div className="flex justify-between text-sm">
+            <span>Active Attributes</span>
+            <span>{stats.activeCount.toLocaleString()}</span>
+          </div>
+          <div className="flex justify-between text-sm">
+            <span>Attribute Types</span>
+            <span>{stats.types.length}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Attribute Types */}
+      <div className="bg-white p-4 rounded-lg shadow md:col-span-3">
+        <h3 className="text-lg font-semibold mb-3">Attribute Types</h3>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="p-4 bg-gray-50 rounded-lg">
-            <div className="text-2xl font-bold text-blue-600">
-              {usageStats.total}
+          {stats.types.map(({ attribute_type, count }) => (
+            <div key={attribute_type} className="flex justify-between text-sm">
+              <span>{attribute_type}</span>
+              <span>
+                {count.toLocaleString()} ({((count / stats.total) * 100).toFixed(0)}%)
+              </span>
             </div>
-            <div className="text-sm text-gray-500">Total Attributes</div>
-          </div>
-          <div className="p-4 bg-gray-50 rounded-lg">
-            <div className="text-2xl font-bold text-green-600">
-              {usageStats.translated}
-            </div>
-            <div className="text-sm text-gray-500">Translated</div>
-          </div>
-          <div className="p-4 bg-gray-50 rounded-lg">
-            <div className="text-2xl font-bold text-yellow-600">
-              {usageStats.active}
-            </div>
-            <div className="text-sm text-gray-500">Active Attributes</div>
-          </div>
-          <div className="p-4 bg-gray-50 rounded-lg">
-            <div className="text-2xl font-bold text-purple-600">
-              {usageStats.types}
-            </div>
-            <div className="text-sm text-gray-500">Attribute Types</div>
-          </div>
+          ))}
         </div>
       </div>
     </div>
   );
-} 
+}

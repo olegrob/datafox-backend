@@ -32,11 +32,15 @@ export default function TresoorConnection() {
 
       const parser = new DOMParser();
       const xmlDoc = parser.parseFromString(responseData.data, 'text/xml');
-      console.log('Parsed XML:', xmlDoc.documentElement.outerHTML);
+      
+      const idValue = xmlDoc.querySelector('BrowseLAODResult clsLadu ID Value')?.textContent;
+      console.log('Extracted ID:', idValue);
+      
+      if (!idValue) {
+        throw new Error('No warehouse ID found in response');
+      }
 
-      const id = xmlDoc.querySelector('LaduID')?.textContent;
-      console.log('Extracted ID:', id);
-      return id;
+      return idValue;
     } catch (err) {
       console.error('Detailed error in fetchWarehouseId:', err);
       throw err;
@@ -54,13 +58,29 @@ export default function TresoorConnection() {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to fetch warehouse details');
+        const errorData = await response.json();
+        throw new Error(`Failed to fetch warehouse details: ${errorData.error || 'Unknown error'}`);
       }
 
       const { data } = await response.json();
       const parser = new DOMParser();
       const xmlDoc = parser.parseFromString(data, 'text/xml');
-      return xmlDoc;
+      
+      const items = xmlDoc.querySelectorAll('BrowseLaojaakResult clsJaak');
+      const parsedItems = Array.from(items).map(item => ({
+        id: item.querySelector('OBJEKTI_ID Value')?.textContent,
+        name: item.querySelector('NIMETUS')?.textContent,
+        code: item.querySelector('SISEKOOD')?.textContent,
+        barcode: item.querySelector('RIBAKOOD')?.textContent,
+        quantity: item.querySelector('KOGUS Value')?.textContent,
+        unit: item.querySelector('YHIK')?.textContent,
+        price: item.querySelector('VIIMANE_OSTUHIND Value')?.textContent
+      }));
+
+      return {
+        totalItems: items.length,
+        items: parsedItems
+      };
     } catch (err) {
       console.error('Error fetching warehouse details:', err);
       throw err;
@@ -114,6 +134,14 @@ export default function TresoorConnection() {
       <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
         <h3 className="text-red-800 font-medium">Connection Error</h3>
         <p className="text-red-600 text-sm mt-1">{error}</p>
+        {rawResponse && (
+          <div className="mt-4">
+            <h4 className="text-sm font-medium text-red-800">Error Details:</h4>
+            <pre className="mt-2 text-xs bg-white p-2 rounded overflow-x-auto">
+              {JSON.stringify(rawResponse, null, 2)}
+            </pre>
+          </div>
+        )}
       </div>
     );
   }
@@ -132,6 +160,14 @@ export default function TresoorConnection() {
         <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
           <h3 className="text-red-800 font-medium">Connection Error</h3>
           <p className="text-red-600 text-sm mt-1">{error}</p>
+          {rawResponse && (
+            <div className="mt-4">
+              <h4 className="text-sm font-medium text-red-800">Error Details:</h4>
+              <pre className="mt-2 text-xs bg-white p-2 rounded overflow-x-auto">
+                {JSON.stringify(rawResponse, null, 2)}
+              </pre>
+            </div>
+          )}
         </div>
       )}
 
@@ -142,10 +178,62 @@ export default function TresoorConnection() {
             <span className="font-medium">{warehouseId}</span>
           </div>
           <div className="bg-gray-50 p-4 rounded-lg">
-            <h3 className="font-medium mb-2">Warehouse Details</h3>
-            <pre className="text-sm overflow-x-auto">
-              {JSON.stringify(warehouseDetails, null, 2)}
-            </pre>
+            <h3 className="font-medium mb-4">Warehouse Details</h3>
+            <div className="text-sm">
+              <p className="mb-4">Total Items: {warehouseDetails.totalItems}</p>
+              {warehouseDetails.items && warehouseDetails.items.length > 0 ? (
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-100">
+                      <tr>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Name
+                        </th>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Code
+                        </th>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Barcode
+                        </th>
+                        <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Quantity
+                        </th>
+                        <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Price
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {warehouseDetails.items.map((item, index) => (
+                        <tr key={index} className="hover:bg-gray-50">
+                          <td className="px-6 py-4 whitespace-normal">
+                            <div className="text-sm text-gray-900">{item.name}</div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm text-gray-900">{item.code}</div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm text-gray-500">{item.barcode}</div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-right">
+                            <div className="text-sm text-gray-900">
+                              {item.quantity} {item.unit}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-right">
+                            <div className="text-sm text-gray-900">
+                              €{parseFloat(item.price).toFixed(2)}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <p className="text-gray-500 mt-2">No items found in warehouse</p>
+              )}
+            </div>
           </div>
         </div>
       ) : (

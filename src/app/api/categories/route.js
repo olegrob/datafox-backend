@@ -1,12 +1,9 @@
+import { dbService } from '@/lib/dbService';
 import { NextResponse } from 'next/server';
-import { getDb } from '@/lib/db';
 
 export async function GET() {
-  let db = null;
   try {
-    db = await getDb('products');
-    
-    const query = `
+    const results = await dbService.query(`
       WITH category_stats AS (
         SELECT 
           p.product_category,
@@ -47,35 +44,11 @@ export async function GET() {
         AND sc.warehouse = cs.warehouse
       )
       ORDER BY total_stock DESC, product_category;
-    `;
+    `);
 
-    const result = await db.sql(query);
-    
-    if (!Array.isArray(result)) {
-      console.error('Unexpected query result format:', result);
-      throw new Error('Invalid query result format');
-    }
-
-    return NextResponse.json({
-      categories: result.map(row => ({
-        category: row.product_category || '',
-        warehouse: row.warehouse || '',
-        productCount: parseInt(row.product_count) || 0,
-        totalStock: parseInt(row.total_stock) || 0,
-        mappedCategory: row.mapped_category || null,
-        createdAt: row.created_at || null,
-        updatedAt: row.updated_at || null
-      }))
-    });
+    return NextResponse.json(results);
   } catch (error) {
-    console.error('Database error details:', error);
-    return NextResponse.json(
-      { 
-        error: 'Failed to fetch categories', 
-        details: error.message,
-        stack: error.stack 
-      },
-      { status: 500 }
-    );
+    console.error('Error fetching categories:', error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

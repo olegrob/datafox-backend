@@ -2,13 +2,26 @@
 
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import AttributesList from './components/AttributesList';
 import AttributeModal from './components/AttributeModal';
 import AttributeStats from './components/AttributeStats';
+import AttributesExportImport from './components/AttributesExportImport';
+import Pagination from '../components/Pagination';
 
 export default function AttributesPage() {
   const { data: session, status } = useSession();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const currentPage = parseInt(searchParams.get('page') || '1');
+  
   const [attributes, setAttributes] = useState([]);
+  const [pagination, setPagination] = useState({
+    total: 0,
+    page: 1,
+    limit: 300,
+    totalPages: 0
+  });
   const [selectedAttribute, setSelectedAttribute] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -28,15 +41,15 @@ export default function AttributesPage() {
 
   useEffect(() => {
     if (status !== 'loading') {
-      fetchAttributes();
+      fetchAttributes(currentPage);
     }
-  }, [status]);
+  }, [status, currentPage]);
 
-  const fetchAttributes = async () => {
+  const fetchAttributes = async (page = 1) => {
     try {
       setLoading(true);
       setError(null);
-      const response = await fetch('/api/attributes');
+      const response = await fetch(`/api/attributes?page=${page}&limit=300`);
       
       if (response.status === 409) {
         setNeedsMigration(true);
@@ -54,6 +67,7 @@ export default function AttributesPage() {
       }
 
       setAttributes(data.attributes);
+      setPagination(data.pagination);
       setNeedsMigration(false);
     } catch (error) {
       console.error('Error fetching attributes:', error);
@@ -157,6 +171,12 @@ export default function AttributesPage() {
     } finally {
       setIsMigrating(false);
     }
+  };
+
+  const handlePageChange = (newPage) => {
+    const params = new URLSearchParams(searchParams);
+    params.set('page', newPage.toString());
+    router.push(`/attributes?${params.toString()}`);
   };
 
   if (needsMigration && session?.user?.role === 'Admin') {
@@ -301,19 +321,65 @@ export default function AttributesPage() {
         </div>
       )}
 
+      {needsMigration ? (
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
+            <h2 className="text-lg font-semibold text-yellow-800 mb-4">Database Migration Required</h2>
+            <p className="text-yellow-700 mb-4">
+              The attributes table needs to be migrated to support warehouse information.
+              This will reset all existing attributes. Please make sure to back up any important data before proceeding.
+            </p>
+            <div className="flex gap-4">
+              <button
+                onClick={handleMigrate}
+                className={`flex items-center gap-2 px-4 py-2 rounded-md ${
+                  isMigrating 
+                    ? 'bg-yellow-200 text-yellow-700 cursor-not-allowed'
+                    : 'bg-yellow-500 text-white hover:bg-yellow-600'
+                }`}
+                disabled={isMigrating}
+              >
+                {isMigrating ? (
+                  <>
+                    <div className="animate-spin h-4 w-4 border-2 border-yellow-700 border-t-transparent rounded-full" />
+                    Migrating...
+                  </>
+                ) : (
+                  'Migrate Database'
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <>
+          <AttributeStats />
+          <AttributesExportImport onImportComplete={() => fetchAttributes(currentPage)} />
+          <div className="mb-4">
+            <AttributesList
+              attributes={attributes}
+              onEdit={handleEdit}
+              onRefresh={() => fetchAttributes(currentPage)}
+            />
+            {!loading && !error && (
+              <div className="mt-4">
+                <Pagination
+                  currentPage={pagination.page}
+                  totalPages={pagination.totalPages}
+                  onPageChange={handlePageChange}
+                />
+              </div>
+            )}
+          </div>
+        </>
+      )}
+
       {loading ? (
         <div className="flex justify-center items-center py-12">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
         </div>
       ) : (
-        <>
-          <AttributeStats attributes={attributes} />
-          <AttributesList
-            attributes={attributes}
-            onEdit={handleEdit}
-            onRefresh={fetchAttributes}
-          />
-        </>
+        <></>
       )}
 
       {showModal && (
@@ -322,7 +388,7 @@ export default function AttributesPage() {
           onClose={() => setShowModal(false)}
           onSave={() => {
             setShowModal(false);
-            fetchAttributes();
+            fetchAttributes(currentPage);
           }}
         />
       )}
@@ -331,7 +397,7 @@ export default function AttributesPage() {
         <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-md">
           <p className="text-red-600">{error}</p>
           <button 
-            onClick={fetchAttributes}
+            onClick={() => fetchAttributes(currentPage)}
             className="mt-2 text-sm text-red-600 hover:text-red-800 underline"
           >
             Try Again

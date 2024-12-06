@@ -8,38 +8,63 @@ export async function POST(request) {
   const stream = new TransformStream();
   const writer = stream.writable.getWriter();
 
-  const sendProgress = async (step, processed, total) => {
+  const sendProgress = async (step, processed, total, error = null) => {
     const update = {
       type: 'progress',
       step,
       processed,
-      total
+      total,
+      error
     };
-    await writer.write(encoder.encode(JSON.stringify(update) + '\n'));
+    try {
+      await writer.write(encoder.encode(JSON.stringify(update) + '\n'));
+    } catch (e) {
+      console.error('Error sending progress:', e);
+    }
   };
+
+  const response = new Response(stream.readable, {
+    headers: { 'Content-Type': 'text/event-stream' }
+  });
 
   try {
     const session = await getServerSession(authOptions);
     if (!session) {
-      throw new Error('Unauthorized');
+      await sendProgress('Error: Unauthorized', 0, 100, 'Unauthorized');
+      await writer.close();
+      return response;
     }
 
     const db = await getDb();
 
-    // Backup existing translations
-    await sendProgress('Backing up existing translations...', 0, 100);
+    // Get products count first
+    await sendProgress('Counting products...', 0, 100);
+    const [{ count }] = await db.sql(`
+      SELECT COUNT(*) as count 
+      FROM products 
+      WHERE product_attributes IS NOT NULL 
+      AND product_attributes != ''
+      AND product_attributes != '[]'
+      AND product_attributes != '{}'
+    `);
+
+    if (count === 0) {
+      await sendProgress('No products found with attributes', 0, 100, 'No products found');
+      await writer.close();
+      return response;
+    }
+
+    await sendProgress('Backing up translations...', 10, 100);
     const existingTranslations = await db.sql(`
       SELECT name, ee_translation, en_translation, ru_translation 
       FROM product_attributes 
       WHERE ee_translation != '' OR en_translation != '' OR ru_translation != ''
     `);
 
-    // Drop existing table if it exists
-    await sendProgress('Dropping existing table...', 10, 100);
+    await sendProgress('Dropping existing table...', 20, 100);
     await db.sql('DROP TABLE IF EXISTS product_attributes;');
 
-    // Create new table with all required columns
-    await sendProgress('Creating new table with updated schema...', 20, 100);
+    await sendProgress('Creating new table...', 30, 100);
     await db.sql(`
       CREATE TABLE product_attributes (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -47,6 +72,7 @@ export async function POST(request) {
         ee_translation TEXT DEFAULT '',
         en_translation TEXT DEFAULT '',
         ru_translation TEXT DEFAULT '',
+        warehouse TEXT DEFAULT '',
         attribute_type TEXT DEFAULT 'text',
         is_active INTEGER DEFAULT 1,
         usage_count INTEGER DEFAULT 0,
@@ -55,135 +81,107 @@ export async function POST(request) {
       );
     `);
 
-    // Get all products with their attributes
-    await sendProgress('Fetching products...', 30, 100);
+    await sendProgress('Fetching products...', 40, 100);
     const products = await db.sql(`
-      SELECT id, product_attributes 
+      SELECT id, product_attributes, warehouse 
       FROM products 
       WHERE product_attributes IS NOT NULL 
       AND product_attributes != ''
       AND product_attributes != '[]'
       AND product_attributes != '{}'
+      LIMIT 1000
     `);
 
-    await sendProgress(`Processing ${products.length} products...`, 40, 100);
+    await sendProgress(`Processing ${products.length} products...`, 50, 100);
 
-    // Process products in memory for better performance
     const attributeUsage = new Map();
+    const warehouseMap = new Map();
     let processedCount = 0;
-    
-    // Process in larger batches for better performance
-    const batchSize = 10000;
-    for (let i = 0; i < products.length; i += batchSize) {
-      const batch = products.slice(i, Math.min(i + batchSize, products.length));
-      
-      batch.forEach(product => {
+
+    for (const product of products) {
+      try {
         if (product.product_attributes) {
-          try {
-            const attrs = JSON.parse(product.product_attributes);
-            Object.keys(attrs).forEach(attrName => {
-              attributeUsage.set(attrName, (attributeUsage.get(attrName) || 0) + 1);
-            });
-            processedCount++;
-          } catch (e) {
-            console.error(`Error parsing attributes for product ${product.id}:`, e);
-          }
+          const attrs = JSON.parse(product.product_attributes);
+          Object.keys(attrs).forEach(attrName => {
+            const trimmedName = attrName.trim();
+            if (trimmedName) {
+              attributeUsage.set(trimmedName, (attributeUsage.get(trimmedName) || 0) + 1);
+              if (product.warehouse) {
+                warehouseMap.set(trimmedName, product.warehouse);
+              }
+            }
+          });
+          processedCount++;
         }
-      });
-
-      const progress = Math.min(40 + Math.floor((i / products.length) * 30), 70);
-      await sendProgress(
-        `Processed ${processedCount} of ${products.length} products...`,
-        progress,
-        100
-      );
-    }
-
-    // Sort attributes by usage count
-    const sortedAttributes = Array.from(attributeUsage.entries())
-      .sort((a, b) => b[1] - a[1])
-      .map(([name, count]) => ({ 
-        name: name.trim(), // Trim whitespace
-        count 
-      }))
-      // Remove duplicates by name (case-insensitive)
-      .filter((attr, index, self) => 
-        index === self.findIndex(a => 
-          a.name.toLowerCase() === attr.name.toLowerCase()
-        )
-      );
-
-    await sendProgress(`Inserting ${sortedAttributes.length} attributes...`, 70, 100);
-
-    // Insert attributes in batches to avoid SQLite parameter limit
-    const insertBatchSize = 500;
-    for (let i = 0; i < sortedAttributes.length; i += insertBatchSize) {
-      const batch = sortedAttributes.slice(i, Math.min(i + insertBatchSize, sortedAttributes.length));
-      
-      // Insert each attribute individually to handle duplicates gracefully
-      for (const attr of batch) {
-        try {
-          await db.sql(`
-            INSERT INTO product_attributes (name, usage_count)
-            VALUES (?, ?);
-          `, [attr.name, attr.count]);
-        } catch (error) {
-          if (!error.message.includes('UNIQUE constraint failed')) {
-            // Only log non-duplicate errors
-            console.error(`Error inserting attribute: ${attr.name}:`, error);
-          }
-          // Try to update instead if insert failed
-          try {
-            await db.sql(`
-              UPDATE product_attributes 
-              SET usage_count = usage_count + ?
-              WHERE name = ?;
-            `, [attr.count, attr.name]);
-          } catch (updateError) {
-            console.error(`Error updating attribute: ${attr.name}:`, updateError);
-          }
-        }
+      } catch (e) {
+        console.error(`Error processing product ${product.id}:`, e);
       }
 
-      const progress = Math.min(70 + Math.floor((i / sortedAttributes.length) * 20), 90);
-      await sendProgress(
-        `Inserted ${Math.min(i + insertBatchSize, sortedAttributes.length)} of ${sortedAttributes.length} attributes...`,
-        progress,
-        100
-      );
+      if (processedCount % 100 === 0) {
+        await sendProgress(
+          `Processed ${processedCount} of ${products.length} products...`,
+          50 + Math.floor((processedCount / products.length) * 20),
+          100
+        );
+      }
     }
 
-    // Restore translations
+    const attributes = Array.from(attributeUsage.entries())
+      .map(([name, count]) => ({
+        name,
+        count,
+        warehouse: warehouseMap.get(name) || ''
+      }))
+      .filter((attr, index, self) => 
+        index === self.findIndex(a => a.name.toLowerCase() === attr.name.toLowerCase())
+      );
+
+    await sendProgress(`Inserting ${attributes.length} attributes...`, 70, 100);
+
+    for (const attr of attributes) {
+      try {
+        await db.sql(`
+          INSERT INTO product_attributes (name, usage_count, warehouse)
+          VALUES (?, ?, ?);
+        `, [attr.name, attr.count, attr.warehouse]);
+      } catch (error) {
+        if (!error.message.includes('UNIQUE constraint')) {
+          console.error(`Error inserting attribute ${attr.name}:`, error);
+        }
+      }
+    }
+
     if (existingTranslations.length > 0) {
       await sendProgress('Restoring translations...', 90, 100);
-      const updateBatchSize = 100;
-      for (let i = 0; i < existingTranslations.length; i += updateBatchSize) {
-        const batch = existingTranslations.slice(i, Math.min(i + updateBatchSize, existingTranslations.length));
-        
-        for (const translation of batch) {
+      for (const translation of existingTranslations) {
+        try {
           await db.sql(`
             UPDATE product_attributes 
             SET ee_translation = ?, en_translation = ?, ru_translation = ?
             WHERE name = ?;
           `, [
-            translation.ee_translation,
-            translation.en_translation,
-            translation.ru_translation,
+            translation.ee_translation || '',
+            translation.en_translation || '',
+            translation.ru_translation || '',
             translation.name
           ]);
+        } catch (error) {
+          console.error(`Error restoring translations for ${translation.name}:`, error);
         }
       }
     }
 
     await sendProgress('Sync completed successfully', 100, 100);
   } catch (error) {
-    console.error('Error in sync:', error);
-    await sendProgress(`Error: ${error.message}`, 0, 100);
+    console.error('Sync error:', error);
+    await sendProgress('Error during sync', 0, 100, error.message);
   } finally {
-    await writer.close();
+    try {
+      await writer.close();
+    } catch (e) {
+      console.error('Error closing writer:', e);
+    }
   }
 
-  return new Response(stream.readable, {
-    headers: { 'Content-Type': 'text/plain; charset=utf-8' }
-  });
+  return response;
 }

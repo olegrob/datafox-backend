@@ -1,6 +1,6 @@
 import NextAuth from 'next-auth';
 import AzureADProvider from 'next-auth/providers/azure-ad';
-import { getDb } from '@/lib/db';
+import { getDb, closeConnection } from '@/lib/db';
 
 const config = {
   providers: [
@@ -19,7 +19,8 @@ const config = {
     async signIn({ account, profile }) {
       if (account?.provider === 'azure-ad') {
         try {
-          await getDb();
+          const db = await getDb('auth-session');
+          await db.sql('SELECT 1'); // Verify connection
           return true;
         } catch (error) {
           console.error('Database connection error:', error);
@@ -29,12 +30,15 @@ const config = {
       return false;
     },
     async session({ session, token }) {
-      session.accessToken = token.accessToken;
+      if (session?.user) {
+        session.user.email = token.email || session.user.email;
+      }
       return session;
     },
-    async jwt({ token, account }) {
+    async jwt({ token, account, profile }) {
       if (account) {
         token.accessToken = account.access_token;
+        token.email = profile?.email || token.email;
       }
       return token;
     }
@@ -42,7 +46,14 @@ const config = {
   pages: {
     signIn: '/',
     error: '/auth/error'
-  }
+  },
+  events: {
+    signOut: async ({ session }) => {
+      if (session?.user?.email) {
+        await closeConnection(session.user.email);
+      }
+    },
+  },
 };
 
 export const authOptions = config;
