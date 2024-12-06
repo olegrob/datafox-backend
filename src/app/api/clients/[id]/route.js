@@ -4,14 +4,16 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/app/api/auth/config';
 import WooCommerceRestApi from '@woocommerce/woocommerce-rest-api';
 
+export const runtime = 'edge';
+export const dynamic = 'force-dynamic';
+export const fetchCache = 'force-no-store';
+
 const api = new WooCommerceRestApi({
   url: process.env.WOOCOMMERCE_STORE_URL,
   consumerKey: process.env.WOOCOMMERCE_CONSUMER_KEY,
   consumerSecret: process.env.WOOCOMMERCE_CONSUMER_SECRET,
   version: 'wc/v3'
 });
-
-export const dynamic = 'force-dynamic';
 
 export async function GET(request, { params }) {
   try {
