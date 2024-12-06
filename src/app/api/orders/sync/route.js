@@ -37,11 +37,35 @@ export async function POST(request) {
   try {
     // Check authentication
     const session = await getServerSession(authOptions);
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    
+    if (!session?.user?.email) {
+      console.error('Unauthorized: No session or user email');
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
     }
 
-    console.log('Manual sync triggered...');
+    // Verify access token from request headers
+    const authHeader = request.headers.get('authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
+      console.error('Unauthorized: No bearer token');
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
+    const token = authHeader.split(' ')[1];
+    if (token !== session.accessToken) {
+      console.error('Unauthorized: Token mismatch');
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
+    console.log('Manual sync triggered by:', session.user.email);
     
     const { period = '90' } = await request.json().catch(() => ({}));
     const periodDays = parseInt(period);

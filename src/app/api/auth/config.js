@@ -7,6 +7,11 @@ export const authOptions = {
       clientId: process.env.AZURE_AD_CLIENT_ID,
       clientSecret: process.env.AZURE_AD_CLIENT_SECRET,
       tenantId: process.env.AZURE_AD_TENANT_ID,
+      authorization: {
+        params: {
+          scope: "openid profile email offline_access"
+        }
+      }
     })
   ],
   session: {
@@ -40,17 +45,22 @@ export const authOptions = {
     },
     async session({ session, token }) {
       if (token) {
-        session.user = token.user;
+        session.user = token.user || session.user;
         session.accessToken = token.accessToken;
         session.error = token.error;
+        session.idToken = token.idToken;
       }
       return session;
     },
     async jwt({ token, account, user, profile }) {
       if (account) {
         token.accessToken = account.access_token;
-        token.user = user;
-        token.profile = profile;
+        token.refreshToken = account.refresh_token;
+        token.idToken = account.id_token;
+        token.user = {
+          ...user,
+          ...profile
+        };
       }
       return token;
     }
